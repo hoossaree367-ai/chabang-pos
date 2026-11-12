@@ -36,6 +36,7 @@ node build.js fake     # ได้ test/out/index.html สำหรับทด�
 - `menu/{id}`: `{id, name, cat, prices:{ร้อน,เย็น,ปั่น,ราคาเดียว}, sweet, order, soldOut}`
 - `config/shop`: `{name, promptpay, addons}`
 - `days/{YYYY-MM-DD}/sales/{billId}`: `{id, day, no, ts, lines[], mode, sub, discount, total, pay, received, change, voided}`
+- รายการจ่ายซื้อของ (เพิ่มในร้านชาบัง) เก็บในคอลเลกชันเดียวกัน: `days/{YYYY-MM-DD}/sales/{e…}`: `{id, kind:'expense', day, ts, item, amount, note, pay:'เงินสด', total:0, voided}` ส่วนสรุปยอดแยก `kind==='expense'` ออกจากบิล แล้วแสดงเป็นจ่ายซื้อของและเงินสดคงเหลือ
 
 กฎความปลอดภัยใน Firestore ให้เฉพาะบัญชีร้านอ่านและเขียนได้
 
