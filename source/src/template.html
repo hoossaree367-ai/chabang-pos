@@ -10,15 +10,15 @@
 <style>
 /* Layout: counter screen. Menu tiles fill the left, the running bill stays fixed on the right like a ticket on the rail. */
 :root{
-  --up:#17683A; --up-soft:#DDF0E4; --down:#9E2E21; --ground:#EEF1F4; --surface:#F7F9FB; --raised:#FFFFFF; --ink:#2A2B30; --muted:#5B6470; --line:#CDD4DC;
+  --pb-ink:#5A2A22; --ground:#EEF1F4; --surface:#F7F9FB; --raised:#FFFFFF; --ink:#2A2B30; --muted:#5B6470; --line:#CDD4DC;
   --leaf:#5A2A22; --leaf-ink:#FFFFFF; --leaf-soft:#F4E7E0; --sky:#6B4A3A; --sky-ink:#FFFFFF; --sun:#DF802C; --leaf-hover:#70372C; --leaf-press:#401C17; --leaf-ring:#E5CBBF; --sky-ring:#E2D3C9; --focus:#6B4A3A; --pb-hover-bg:#E5CBBF; --pb-hover-ink:#401C17; --cherry-press:#9E2E21; --off:#D6D1CB; --off-ink:#FFFFFF; --lift:0 3px 6px rgba(42,43,48,.16),0 1px 2px rgba(42,43,48,.10); --lift-sm:0 2px 4px rgba(42,43,48,.12); --cherry:#C23A2B; --cherry-soft:#F8E0DC; --amber:#8A5A00; --amber-soft:#F6E9C8;
   --display:"Prompt",system-ui,sans-serif;--num:"Kanit","Prompt",system-ui,sans-serif; --body:"Prompt",system-ui,-apple-system,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --ground:#1C1611; --surface:#241C16; --raised:#2E241C; --ink:#F1EAE2; --muted:#B5A698; --line:#45382D; --up:#6FCF97; --up-soft:#1F3A2A; --down:#F08A7C;
+  --ground:#1C1611; --surface:#241C16; --raised:#2E241C; --ink:#F1EAE2; --muted:#B5A698; --line:#45382D; --pb-ink:#FFFFFF;
   --leaf:#E8964A; --leaf-ink:#1D140E; --leaf-soft:#40291A; --sky:#D9B79A; --sky-ink:#1C1611; --sun:#E8964A; --leaf-hover:#F0AE70; --leaf-press:#C97A33; --leaf-ring:#5E4029; --sky-ring:#4E3E33; --focus:#D9B79A; --pb-hover-bg:#4C3524; --pb-hover-ink:#F4C89C; --cherry-press:#D9695B; --off:#45382D; --off-ink:#8C7D70; --lift:0 3px 8px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35); --lift-sm:0 2px 4px rgba(0,0,0,.35); --cherry:#F08A7C; --cherry-soft:#4A2622; --amber:#E9BE62; --amber-soft:#3E3018; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --ground:#1C1611; --surface:#241C16; --raised:#2E241C; --ink:#F1EAE2; --muted:#B5A698; --line:#45382D; --up:#6FCF97; --up-soft:#1F3A2A; --down:#F08A7C;
+  --ground:#1C1611; --surface:#241C16; --raised:#2E241C; --ink:#F1EAE2; --muted:#B5A698; --line:#45382D; --pb-ink:#FFFFFF;
   --leaf:#E8964A; --leaf-ink:#1D140E; --leaf-soft:#40291A; --sky:#D9B79A; --sky-ink:#1C1611; --sun:#E8964A; --leaf-hover:#F0AE70; --leaf-press:#C97A33; --leaf-ring:#5E4029; --sky-ring:#4E3E33; --focus:#D9B79A; --pb-hover-bg:#4C3524; --pb-hover-ink:#F4C89C; --cherry-press:#D9695B; --off:#45382D; --off-ink:#8C7D70; --lift:0 3px 8px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35); --lift-sm:0 2px 4px rgba(0,0,0,.35); --cherry:#F08A7C; --cherry-soft:#4A2622; --amber:#E9BE62; --amber-soft:#3E3018; color-scheme:dark}
 html{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html,body{height:100%;margin:0}
@@ -137,10 +137,6 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
 .stname .stn{display:grid;flex:1;min-width:0}.stedit{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--leaf);font-size:13px;font-weight:600}
 @media (hover:hover){.stname:hover{border-color:var(--leaf-ring);background:var(--leaf-soft)}}
 .stname:active{background:var(--leaf-soft);transform:translateY(1px)}
-.delta{display:inline-flex;align-items:center;gap:3px;margin:0 0 0 8px;vertical-align:middle;padding:1px 8px;border-radius:10px;font:600 12px/18px var(--num);white-space:nowrap}
-.delta.up{background:var(--up-soft);color:var(--up)}.delta.down{background:var(--cherry-soft);color:var(--down)}.delta.flat{background:var(--line);color:var(--ink)}
-.kpis div.hero .delta.up{color:var(--up)}.kpis div.hero .delta.down{color:var(--down)}
-.cmp{color:var(--muted);font-size:13px;margin:6px 0 0}
 .minibar{display:none}
 @media (max-width:720px){
   html,body{height:auto}
@@ -227,14 +223,14 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
 /* Menu cards: price pills are real buttons with the same states as other buttons */
 .tile .pbs{display:flex;gap:8px;padding:2px 10px 10px;border-top:0}
 .tile .pb+.pb{border-left:0}
-.tile .pb{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--leaf-ring);background:var(--leaf-soft);color:var(--leaf);font-size:13px;box-shadow:var(--lift-sm);transition:background .12s,box-shadow .12s,transform .06s,color .12s}
+.tile .pb{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--leaf-ring);background:var(--leaf-soft);color:var(--pb-ink);font-size:13px;box-shadow:var(--lift-sm);transition:background .12s,box-shadow .12s,transform .06s,color .12s}
 .tile .pb b{color:inherit}
 
 @media (hover:hover){.tile .pb:hover{background:var(--pb-hover-bg);color:var(--pb-hover-ink)}}
 .tile .pb:active,.tile .pb:hover:active{background:var(--leaf);color:var(--leaf-ink);box-shadow:0 0 0 4px var(--leaf-ring);transform:translateY(2px)}
 .tile .tn:active{background:var(--surface)}
 .tile.one{padding-right:10px}
-.tile.one .pb{flex:none;min-width:72px;display:inline-flex;align-items:center;justify-content:center;color:var(--leaf);font:600 16px var(--num)}
+.tile.one .pb{flex:none;min-width:72px;display:inline-flex;align-items:center;justify-content:center;color:var(--pb-ink);font:600 16px var(--num)}
 .tile.one:active .pb{background:var(--leaf);color:var(--leaf-ink);box-shadow:0 0 0 4px var(--leaf-ring);transform:translateY(2px)}
 .tile.one:active{background:var(--raised)}
 .tile.out .pill{justify-self:start}
