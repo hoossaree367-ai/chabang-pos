@@ -97,9 +97,22 @@ function rangeLabel(range,anchor){
   if(range==='month')return dt(days[0]).toLocaleDateString('th-TH',{month:'long',year:'numeric'});
   return dt(days[0]).toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' – '+dt(days[6]).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
 }
+// ช่วงก่อนหน้าสำหรับเทียบ: ถ้าช่วงที่ดูยังไม่จบ (มีวันนี้อยู่) เทียบเฉพาะจำนวนวันและเวลาที่ผ่านมาเท่ากัน
+function prevRange(range,anchor){
+  const cur=rangeDays(range,anchor),prev=rangeDays(range,shiftAnchor(range,anchor,-1)),i=cur.indexOf(S.todayKey);
+  const what=range==='day'?(anchor===S.todayKey?'เมื่อวาน':'วันก่อนหน้า'):range==='week'?'สัปดาห์ก่อน':'เดือนก่อน';
+  if(i<0)return {days:prev,label:'เทียบกับ'+what};
+  const days=prev.slice(0,i+1),last=days.length===i+1?days[i]:null,n=new Date(),tod=n.getHours()*60+n.getMinutes();
+  return {days,label:'เทียบกับ'+what+'ในช่วงเวลาเดียวกัน',keep:s=>{if(s.day!==last)return true;const t=new Date(s.ts);return t.getHours()*60+t.getMinutes()<=tod}};
+}
+function delta(cur,prev){
+  if(!prev)return cur?'<span class="delta flat">ช่วงก่อนไม่มียอด</span>':'';
+  const p=Math.round((cur-prev)/prev*100);
+  return p>0?`<span class="delta up"><span aria-hidden="true">▲</span><span class="sr">เพิ่มขึ้น</span> ${p}%</span>`:p<0?`<span class="delta down"><span aria-hidden="true">▼</span><span class="sr">ลดลง</span> ${-p}%</span>`:'<span class="delta flat">เท่าเดิม</span>';
+}
 function loadRange(){
   if(!S.db)return render();
-  const now=Date.now(),need=rangeDays(S.range,S.viewDay).filter(d=>d<S.todayKey&&(!(d in S.dayCache)||now-(S.dayFetched[d]||0)>300000));
+  const now=Date.now(),need=[...rangeDays(S.range,S.viewDay),...prevRange(S.range,S.viewDay).days].filter(d=>d<S.todayKey&&(!(d in S.dayCache)||now-(S.dayFetched[d]||0)>300000));
   S.loadErr=false;
   if(!need.length){S.loading=false;return render()}
   const token=loadRange.t=(loadRange.t||0)+1;S.loading=true;render();
@@ -170,7 +183,7 @@ const THEMES={auto:{label:'อัตโนมัติ',next:'light',icon:'<svg 
  dark:{label:'มืด',next:'auto',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>'}};
 function themeMode(){const v=document.documentElement.getAttribute('data-theme');return v==='light'||v==='dark'?v:'auto'}
 function applyTheme(m){if(m==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);try{localStorage.setItem('chabang.theme',m)}catch(e){}
-  const dark=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const meta=document.querySelector('meta[name=theme-color]');if(meta)meta.content=dark?'#1D2127':'#4D2420';renderTheme()}
+  const dark=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const meta=document.querySelector('meta[name=theme-color]');if(meta)meta.content=dark?'#1C1611':'#4D2420';renderTheme()}
 function renderTheme(){const b=$('themebtn');if(!b)return;const m=themeMode(),t=THEMES[m];b.innerHTML=t.icon+'<span class="tl">'+t.label+'</span>';b.setAttribute('aria-label','ธีม '+t.label+' แตะเพื่อเปลี่ยนเป็น'+THEMES[t.next].label)}
 function renderChrome(){
   renderTheme();
@@ -221,8 +234,8 @@ function watchBill(){
 }
 function isCup(l){return l.type==='แก้ว'||l.type==='ถุง/ถัง'||l.type==='ปั่น'||l.type===OWN}
 function catOf(l){if(l.cat)return l.cat;const m=S.menu.find(x=>x.id===l.mid&&x.name===l.name)||S.menu.find(x=>x.name===l.name);return m&&m.cat||'อื่น ๆ'}
-function summary(days){
-  const every=days.flatMap(d=>salesOf(d)),all=every.filter(s=>!s.kind),ok=all.filter(s=>!s.voided);
+function summary(days,keep){
+  const every=days.flatMap(d=>salesOf(d)).filter(s=>!keep||keep(s)),all=every.filter(s=>!s.kind),ok=all.filter(s=>!s.voided);
   const expenses=every.filter(s=>s.kind==='expense'),exp=expenses.filter(s=>!s.voided).reduce((a,s)=>a+(s.amount||0),0);
   const r={all,ok,expenses,exp,total:0,cash:0,qr:0,cups:0,hot:0,iced:0,frappe:0,own:0,pieces:0,drinkAmt:0,items:{},cats:{},hours:{},perDay:{}};
   days.forEach(d=>{r.perDay[d]={cups:0,total:0,bills:0}});
@@ -248,6 +261,7 @@ function summary(days){
 }
 function renderSales(){
   const R=S.range,d=S.viewDay,days=rangeDays(R,d),r=summary(days);
+  const pr=prevRange(R,d),pv=S.loading?null:summary(pr.days,pr.keep),dl=(a,b)=>pv?delta(a,b):'';
   const nextDisabled=rangeDays(R,shiftAnchor(R,d,1))[0]>S.todayKey;
   const hs=Object.keys(r.hours).map(Number),h0=Math.min(6,...hs),h1=Math.max(20,...hs),maxH=Math.max(1,...Object.values(r.hours));
   const range=[];for(let h=h0;h<=h1;h++)range.push(h);
@@ -271,9 +285,10 @@ function renderSales(){
   <button class="iconbtn" data-act="day" data-d="-1" aria-label="ช่วงก่อนหน้า">‹</button><button class="iconbtn" data-act="day" data-d="1" aria-label="ช่วงถัดไป" ${nextDisabled?'disabled':''}>›</button><h2>${rangeLabel(R,d)}</h2>
   <button class="btn" data-act="copy-summary">คัดลอกสรุป</button><button class="btn" data-act="csv">ส่งออก CSV</button></div>
   ${S.loadErr?'<div class="notice">โหลดยอดบางวันไม่สำเร็จ ตัวเลขอาจไม่ครบ ตรวจอินเทอร์เน็ตแล้วเปิดแท็บนี้ใหม่</div>':S.loading?'<div class="muted">กำลังโหลดยอดขาย</div>':''}
-  <div class="kpis"><div class="hero"><label>จำนวนแก้วรวม</label><strong class="num">${r.cups.toLocaleString('en-US')} แก้ว</strong><small>${typeLine}</small></div>
-  <div><label>ยอดขาย</label><strong class="num">${baht(r.total)}</strong><small>${r.cups?'เฉลี่ย '+baht(Math.round(r.drinkAmt/r.cups))+' ต่อแก้ว':'—'}</small></div>
-  <div><label>จำนวนบิล</label><strong class="num">${r.ok.length.toLocaleString('en-US')} บิล</strong><small>${r.ok.length?'เฉลี่ย '+(r.cups/r.ok.length).toFixed(1)+' แก้วต่อบิล':'—'}</small></div></div>
+  <div class="kpis"><div class="hero"><label>จำนวนแก้วรวม</label><strong class="num">${r.cups.toLocaleString('en-US')} แก้ว</strong>${dl(r.cups,pv&&pv.cups)}<small>${typeLine}</small></div>
+  <div><label>ยอดขาย</label><strong class="num">${baht(r.total)}</strong>${dl(r.total,pv&&pv.total)}<small>${r.cups?'เฉลี่ย '+baht(Math.round(r.drinkAmt/r.cups))+' ต่อแก้ว':'—'}</small></div>
+  <div><label>จำนวนบิล</label><strong class="num">${r.ok.length.toLocaleString('en-US')} บิล</strong>${dl(r.ok.length,pv&&pv.ok.length)}<small>${r.ok.length?'เฉลี่ย '+(r.cups/r.ok.length).toFixed(1)+' แก้วต่อบิล':'—'}</small></div></div>
+  ${pv&&(pv.total||r.total)?`<p class="cmp">▲▼ ${pr.label} (${baht(pv.total)} · ${pv.cups} แก้ว · ${pv.ok.length} บิล)</p>`:''}
   <div class="payrow"><span>เงินสด <b class="num">${baht(r.cash)}</b></span><span>พร้อมเพย์ <b class="num">${baht(r.qr)}</b></span>${r.exp?`<span>จ่ายซื้อของ <b class="num">−${baht(r.exp)}</b></span>`:''}${r.pieces?`<span>ของอื่นที่ไม่นับเป็นแก้ว <b class="num">${r.pieces} ชิ้น</b></span>`:''}</div>
   <div class="two">${chart}<section class="panel"><h3>แยกตามหมวด</h3>${cats}</section></div>
   <section class="panel"><h3>ทุกเมนูที่ขาย</h3>${table}</section>
@@ -443,7 +458,7 @@ function addLine(it,type,sweet,addonNames,qty=1){
   const same=S.cart.lines.find(l=>JSON.stringify([l.mid,l.type,l.sweet,l.addons])===k);
   if(same)same.qty+=qty;else S.cart.lines.push(line);saveCart();S.flash=S.cart.lines.indexOf(same||line);S.bump=true;setTimeout(()=>{S.bump=false},0);clearTimeout(addLine.t);addLine.t=setTimeout(()=>{S.flash=null;document.querySelectorAll('.line.flash').forEach(e=>e.classList.remove('flash'))},700);
 }
-function dailyText(){const days=rangeDays(S.range,S.viewDay),r=summary(days);return `สรุปยอดขาย ${S.config.name} ${rangeLabel(S.range,S.viewDay)}\nจำนวน ${r.cups} แก้ว\nยอดขาย ${baht(r.total)} จาก ${r.ok.length} บิล\nเงินสด ${baht(r.cash)}\nพร้อมเพย์ ${baht(r.qr)}\n`+(r.exp?`จ่ายซื้อของ ${baht(r.exp)}\n`:'')+(r.open||r.exp?`ควรมีในลิ้นชัก ${sbaht(r.drawer)}\n`:'')+(r.close?`นับได้ ${baht(r.close.counted)} ${r.close.diff===0?'ตรงพอดี':r.close.diff<0?'ขาด '+baht(-r.close.diff):'เกิน '+baht(r.close.diff)}\n`:'')+r.itemList.slice(0,5).map(([n,x])=>`${n} ${x.qty}`).join('\n')}
+function dailyText(){const days=rangeDays(S.range,S.viewDay),r=summary(days);return `สรุปยอดขาย ${S.config.name} ${rangeLabel(S.range,S.viewDay)}\nจำนวน ${r.cups} แก้ว\nยอดขาย ${baht(r.total)} จาก ${r.ok.length} บิล\nเงินสด ${baht(r.cash)}\nพร้อมเพย์ ${baht(r.qr)}\n`+(()=>{const pr=prevRange(S.range,S.viewDay),pv=summary(pr.days,pr.keep);if(!pv.total)return '';const p=Math.round((r.total-pv.total)/pv.total*100);return `${pr.label} ${p>0?'เพิ่มขึ้น '+p+'%':p<0?'ลดลง '+(-p)+'%':'เท่าเดิม'} (${baht(pv.total)})\n`})()+(r.exp?`จ่ายซื้อของ ${baht(r.exp)}\n`:'')+(r.open||r.exp?`ควรมีในลิ้นชัก ${sbaht(r.drawer)}\n`:'')+(r.close?`นับได้ ${baht(r.close.counted)} ${r.close.diff===0?'ตรงพอดี':r.close.diff<0?'ขาด '+baht(-r.close.diff):'เกิน '+baht(r.close.diff)}\n`:'')+r.itemList.slice(0,5).map(([n,x])=>`${n} ${x.qty}`).join('\n')}
 
 /* ---------- events ---------- */
 const ACT={
