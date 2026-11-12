@@ -398,7 +398,6 @@ const MODALS={
   <label class="field"><span>ได้ปริมาณ</span><input id="se-qty" inputmode="decimal" type="number" min="0" step="any" value="${x.qty??''}" placeholder="เช่น 380"></label>
   <label class="field"><span>หน่วย</span><select id="se-unit"><option value="">เลือกหน่วย</option>${UNITS.map(u=>`<option ${x.unit===u?'selected':''}>${u}</option>`).join('')}${x.unit&&!UNITS.includes(x.unit)?`<option selected>${esc(x.unit)}</option>`:''}</select></label>
   <label class="field" style="grid-column:1/-1"><span>คนที่ซื้อมา</span><input id="se-buyer" autocomplete="off" maxlength="20" value="${esc(x.buyer||'')}" placeholder="เช่น ฝน"></label>
-  ${staffNames().length?`<div class="chips" style="grid-column:1/-1">${staffNames().map(n=>`<button type="button" class="chip" data-act="se-buyer" data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:''}
   <p class="hint" style="grid-column:1/-1">ตัวอย่าง: นมข้นหวาน 25 บาท ได้ 380 กรัม · น้ำแข็ง 30 บาท ได้ 1 กระสอบ · แก้ว 85 บาท ได้ 50 ใบ${x.priceAt?'<br>แก้ราคาล่าสุด '+new Date(x.priceAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})+(x.buyer?' · ซื้อโดย '+esc(x.buyer):''):''}</p>
   <div class="pay" style="grid-column:1/-1"><button class="btn" type="button" data-act="close">ยกเลิก</button><button class="btn main" type="submit">บันทึก</button></div>
   <button class="link danger" type="button" style="grid-column:1/-1" data-act="${m.confirmDel?'stock-del-ok':'stock-del'}">${m.confirmDel?'แตะอีกครั้งเพื่อลบ':'ลบรายการนี้'}</button></form>`},
@@ -481,7 +480,6 @@ const ACT={
   if(d.v!=='ok')notify('stock',(d.v==='out'?'🔴 ':'🟡 ')+x.name+' '+ST[d.v],'แจ้งโดย '+(S.staff||'ไม่ระบุ'),'s'+x.id);toast(x.name+' · '+ST[d.v])},
  'stock-starter'(){STOCK_STARTER.forEach((n,i)=>saveStock({id:'s'+Date.now()+i,name:n,status:'ok',order:i}));render()},
  'stock-edit'(d){const x=S.stock.find(y=>y.id===d.id);if(x)openModal({type:'stockEdit',item:{...x}})},
- 'se-buyer'(d){$('se-buyer').value=d.v},
  'stock-del'(){S.modal.confirmDel=true;renderModal()},
  'stock-del-ok'(){const id=S.modal.item.id;S.stock=S.stock.filter(y=>y.id!==id);lsSet('chabang.stock',S.stock);if(S.db)S.db.collection('stock').doc(id).delete().catch(()=>{});closeModal();toast('ลบรายการแล้ว')},
  'stock-copy'(){const t=stockText();navigator.clipboard.writeText(t).then(()=>toast('คัดลอกแล้ว วางใน LINE ได้เลย')).catch(()=>openModal({type:'copy',text:t}))},
