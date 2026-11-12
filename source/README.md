@@ -37,6 +37,7 @@ node build.js fake     # ได้ test/out/index.html สำหรับทด�
 - `config/shop`: `{name, promptpay, addons}`
 - `days/{YYYY-MM-DD}/sales/{billId}`: `{id, day, no, ts, lines[], mode, sub, discount, total, pay, received, change, voided}`
 - รายการจ่ายซื้อของ (เพิ่มในร้านชาบัง) เก็บในคอลเลกชันเดียวกัน: `days/{YYYY-MM-DD}/sales/{e…}`: `{id, kind:'expense', day, ts, item, amount, note, pay:'เงินสด', total:0, voided}` ส่วนสรุปยอดแยก `kind==='expense'` ออกจากบิล แล้วแสดงเป็นจ่ายซื้อของและเงินสดคงเหลือ
+- เงินทอนตั้งต้นและปิดยอด (เพิ่มในร้านชาบัง) อยู่ในคอลเลกชันเดียวกัน: `o{YYYY-MM-DD}` = `{kind:'open', amount, staff}` และ `c{YYYY-MM-DD}` = `{kind:'close', counted, expected, diff, staff}` ใช้ id ตามวันจึงเขียนทับได้วันละรายการ · ทุกบิลและรายการจ่ายมีฟิลด์ `staff` จากชื่อพนักงานที่เลือกในเครื่อง (`chabang.staff`)
 
 กฎความปลอดภัยใน Firestore ให้เฉพาะบัญชีร้านอ่านและเขียนได้
 
