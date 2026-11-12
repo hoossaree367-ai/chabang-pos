@@ -340,13 +340,18 @@ function pushSection(){
   return `<section class="panel" style="margin-top:8px"><h3>แจ้งเตือนบนมือถือ</h3>${mine}${others.length?`<div class="muted" style="margin-top:10px">เครื่องอื่นที่รับแจ้งเตือน</div><div class="list">${others.map(p=>`<div class="li"><div class="g">${esc(p.device||'เครื่อง')}${p.name?' · '+esc(p.name):''}<small>${PUSH_KINDS.filter(([k])=>p.prefs&&(p.prefs[k]??k==='stock')).map(x=>x[1]).join(', ')||'ปิดทุกเรื่อง'}</small></div><button type="button" class="link danger" data-act="push-del" data-id="${esc(p.id)}">เลิกส่ง</button></div>`).join('')}</div>`:''}</section>`;
 }
 const ST={ok:'มีพอ',low:'ใกล้หมด',out:'หมด'};
+const UNITS=['กรัม','กิโลกรัม','มล.','ลิตร','ชิ้น','ใบ','ลูก','กระป๋อง','ขวด','ถุง','แพ็ก','กล่อง','ลัง','กระสอบ'];
+const fmtN=n=>Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
+function priceText(x){if(x.price==null)return '';const q=x.qty||1,u=x.unit||'';
+  return baht(x.price)+' ต่อ '+(q===1&&u?u:fmtN(q)+' '+u).trim()+(q>1&&u?' (≈'+'฿'+fmtN(x.price/q)+'/'+u+')':'')}
 const STOCK_STARTER=['ผงชาไทย','ชาเขียว','ชาดำ','กาแฟโบราณ','โกโก้','ไมโล','นมข้นหวาน','นมข้นจืด','นมสด','น้ำตาล','ไซรัป/น้ำหวาน','มะนาว','น้ำแข็ง','แก้ว','ฝาแก้ว','ถุง/ถัง','หลอด'];
 function stockText(){const o=S.stock.filter(x=>x.status==='out'),l=S.stock.filter(x=>x.status==='low');
-  return `รายการต้องซื้อ ${S.config.name} ${thaiDay(dayKey())}\n`+(o.length?'หมดแล้ว\n'+o.map(x=>'- '+x.name).join('\n')+'\n':'')+(l.length?'ใกล้หมด\n'+l.map(x=>'- '+x.name).join('\n'):'')}
+  const li=x=>'- '+x.name+(x.price!=null?' · '+priceText(x).replace(/ \(≈.*\)$/,''):''),tot=[...o,...l].reduce((a,x)=>a+(x.price||0),0);
+  return `รายการต้องซื้อ ${S.config.name} ${thaiDay(dayKey())}\n`+(o.length?'หมดแล้ว\n'+o.map(li).join('\n')+'\n':'')+(l.length?'ใกล้หมด\n'+l.map(li).join('\n')+'\n':'')+(tot?'รวมประมาณ '+baht(tot)+' (อย่างละ 1 หน่วยที่ซื้อ)':'')}
 function renderStock(){
   const o=S.stock.filter(x=>x.status==='out'),l=S.stock.filter(x=>x.status==='low');
   const ago=ts=>{if(!ts)return '';const m=Math.round((Date.now()-ts)/60000);return m<1?'เมื่อสักครู่':m<60?m+' นาทีที่แล้ว':m<1440?Math.round(m/60)+' ชม.ที่แล้ว':new Date(ts).toLocaleDateString('th-TH',{day:'numeric',month:'short'})};
-  const row=x=>`<div class="li stock st-${x.status||'ok'}"><button class="g" data-act="stock-edit" data-id="${esc(x.id)}" style="text-align:left"><b>${esc(x.name)}</b><small>${x.status&&x.status!=='ok'&&x.at?ST[x.status]+' · '+ago(x.at)+(x.by?' · '+esc(x.by):''):''}</small></button>
+  const row=x=>`<div class="li stock st-${x.status||'ok'}"><button class="g" data-act="stock-edit" data-id="${esc(x.id)}" style="text-align:left"><b>${esc(x.name)}</b><small>${esc([priceText(x),x.status&&x.status!=='ok'&&x.at?ST[x.status]+' · '+ago(x.at)+(x.by?' · '+x.by:''):''].filter(Boolean).join(' · ')||'แตะเพื่อใส่ราคาที่ซื้อ')}</small></button>
    <div class="st3" role="group" aria-label="สถานะ ${esc(x.name)}">${Object.entries(ST).map(([k,v])=>`<button class="${k}${(x.status||'ok')===k?' on':''}" data-act="stock-set" data-id="${esc(x.id)}" data-v="${k}" aria-pressed="${(x.status||'ok')===k}">${v}</button>`).join('')}</div></div>`;
   const scroll=document.querySelector('#view .scroll')?.scrollTop||0;
   $('view').innerHTML=`<div class="scroll"><div class="narrow"><div class="daybar"><h2>สต๊อกวัตถุดิบ</h2>${o.length||l.length?'<button class="btn" data-act="stock-copy" style="margin-left:auto">คัดลอกรายการต้องซื้อ</button>':''}</div>
@@ -404,6 +409,10 @@ const MODALS={
  float(m){return `<h2>เงินทอนตั้งต้น</h2><p class="muted">เงินที่ใส่ไว้ในลิ้นชักตอนเปิดร้านวันนี้</p><div class="big num center">${baht(+m.buf||0)}</div><div class="chips">${[500,1000,1500,2000].map(x=>`<button class="chip num" data-act="set-buf" data-v="${x}">${x.toLocaleString('en-US')}</button>`).join('')}</div>${keypad()}<div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="float-ok">บันทึก</button></div>`},
  closeDay(m){const r=summary([S.todayKey]),got=+m.buf||0,d=got-r.drawer;return `<h2>ปิดยอด นับเงินในลิ้นชัก</h2><div class="row"><span>ควรมีในลิ้นชัก</span><span class="total num">${sbaht(r.drawer)}</span></div><div class="row"><span>นับได้จริง</span><span class="total num">${baht(got)}</span></div>${keypad()}<div class="row"><span>ผลต่าง</span><span class="total num" style="color:${!m.buf||d===0?'var(--leaf)':'var(--cherry)'}">${!m.buf?'—':d===0?'ตรงพอดี':d<0?'ขาด '+baht(-d):'เกิน '+baht(d)}</span></div>${r.open?'':'<p class="hint warn">ยังไม่ได้ใส่เงินทอนตั้งต้นของวันนี้ ยอดที่ควรมีจึงยังไม่รวมเงินทอน</p>'}<div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="close-ok" ${m.buf?'':'disabled'}>บันทึกการปิดยอด</button></div>`},
  stockEdit(m){const x=m.item;return `<h2>แก้ไขวัตถุดิบ</h2><form id="sef" class="fields" style="display:grid"><label class="field" style="grid-column:1/-1"><span>ชื่อ</span><input id="se-name" required value="${esc(x.name)}"></label>
+  <label class="field" style="grid-column:1/-1"><span>ราคาที่ซื้อ (บาท)</span><input id="se-price" inputmode="decimal" type="number" min="0" step="0.25" value="${x.price??''}" placeholder="เช่น 25"></label>
+  <label class="field"><span>ได้ปริมาณ</span><input id="se-qty" inputmode="decimal" type="number" min="0" step="any" value="${x.qty??''}" placeholder="เช่น 380"></label>
+  <label class="field"><span>หน่วย</span><select id="se-unit"><option value="">เลือกหน่วย</option>${UNITS.map(u=>`<option ${x.unit===u?'selected':''}>${u}</option>`).join('')}${x.unit&&!UNITS.includes(x.unit)?`<option selected>${esc(x.unit)}</option>`:''}</select></label>
+  <p class="hint" style="grid-column:1/-1">ตัวอย่าง: นมข้นหวาน 25 บาท ได้ 380 กรัม · น้ำแข็ง 30 บาท ได้ 1 กระสอบ · แก้ว 85 บาท ได้ 50 ใบ${x.priceAt?'<br>แก้ราคาล่าสุด '+new Date(x.priceAt).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}):''}</p>
   <div class="pay" style="grid-column:1/-1"><button class="btn" type="button" data-act="close">ยกเลิก</button><button class="btn main" type="submit">บันทึก</button></div>
   <button class="link danger" type="button" style="grid-column:1/-1" data-act="${m.confirmDel?'stock-del-ok':'stock-del'}">${m.confirmDel?'แตะอีกครั้งเพื่อลบ':'ลบรายการนี้'}</button></form>`},
  clear(){return `<h2>ล้างบิลปัจจุบัน?</h2><div class="pay"><button class="btn" data-act="close">เก็บไว้</button><button class="btn danger" data-act="clear-ok">ล้างบิล</button></div>`},
@@ -543,7 +552,10 @@ document.addEventListener('submit',e=>{
     saveConfig({name:$('c-name').value.trim()||'ร้านกาแฟ',promptpay:$('c-pp').value.trim(),addons:$('c-add').value,pushUrl:pu});render();
     const pp=$('c-pp').value.trim();toast(pp&&!promptpayPayload(pp,1)?'เลขพร้อมเพย์ต้องมี 10, 13 หรือ 15 หลัก':'บันทึกการตั้งค่าแล้ว')}
   if(e.target.id==='stf'){const n=$('st-name').value.trim();if(!n)return;saveStock({id:'s'+Date.now(),name:n,status:'ok',order:S.stock.length});render();$('st-name')&&$('st-name').focus();toast('เพิ่ม '+n+' แล้ว')}
-  if(e.target.id==='sef'){const n=$('se-name').value.trim();if(!n)return;saveStock({...S.stock.find(y=>y.id===S.modal.item.id),name:n});closeModal()}
+  if(e.target.id==='sef'){const n=$('se-name').value.trim();if(!n)return;const old=S.stock.find(y=>y.id===S.modal.item.id)||S.modal.item;
+    const pv=$('se-price').value,qv=$('se-qty').value,u=$('se-unit').value,rec={...old,name:n};
+    if(pv===''){delete rec.price;delete rec.qty;delete rec.unit}else{rec.price=+pv;rec.qty=qv===''?1:+qv;rec.unit=u;if(old.price!==rec.price||old.qty!==rec.qty||old.unit!==u)rec.priceAt=Date.now()}
+    saveStock(rec);closeModal();toast('บันทึก '+n+' แล้ว')}
   if(e.target.id==='sf'){const n=$('s-name').value.trim();if(!n){toast('พิมพ์ชื่อหรือแตะเลือกชื่อ');return}setStaff(n);closeModal();toast('เริ่มกะของ '+n)}
   if(e.target.id==='ef'){const item=$('e-item').value.trim(),amount=Math.round(+$('e-amt').value||0);
     if(!item||amount<=0){toast('ใส่ชื่อของและจำนวนเงิน');return}
