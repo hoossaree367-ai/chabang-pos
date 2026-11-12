@@ -1,4 +1,8 @@
-# WITH YOU POS: คู่มือสำหรับนำไปทำร้านใหม่
+# ชาบัง POS (ต้นแบบจาก WITH YOU POS)
+
+ร้าน: ชาบัง · Firebase project: `pos-chabang` · บัญชีร้าน: `chabang@pos.com` · กฎ Firestore อยู่ที่ `firestore.rules`
+
+## คู่มือเดิมจากต้นแบบ WITH YOU
 
 POS ร้านกาแฟสำหรับ iPad เป็นเว็บแอปไฟล์เดียว เก็บข้อมูลใน Firebase และเผยแพร่ผ่าน GitHub Pages
 
