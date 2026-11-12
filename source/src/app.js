@@ -299,8 +299,19 @@ function expPanel(r,R){
   return `<section class="panel">${head}${r.expenses.length?sum+'<div class="list">'+r.expenses.map(s=>`<div class="li"><div class="g"><span class="${s.voided?'voided':''}">${esc(s.item)}</span><small>${new Date(s.ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น.${s.staff?' · '+esc(s.staff):''}${s.note?' · '+esc(s.note):''}</small></div>${s.voided?'<span class="pill">ยกเลิกแล้ว</span>':`<strong class="num">−${baht(s.amount)}</strong><button class="link danger" data-act="void" data-id="${s.id}">ยกเลิก</button>`}</div>`).join('')+'</div>':'<div class="muted">เมื่อหยิบเงินในลิ้นชักไปซื้อของ ให้บันทึกที่นี่ ยอดเงินสดคงเหลือจะหักให้อัตโนมัติ</div>'}</section>`;
 }
 function expenseNames(){const seen=new Set(),out=[];Object.values(S.dayCache).flat().concat(S.today,S.queue).filter(s=>s&&s.kind==='expense'&&!s.voided).sort((a,b)=>b.ts-a.ts).forEach(s=>{if(!seen.has(s.item)){seen.add(s.item);out.push(s.item)}});return out.slice(0,8)}
+function menuGroups(){return cats().slice(1).map(c=>[c,S.menu.filter(m=>(m.cat||'อื่น ๆ')===c)])}
+function applyOrder(groups){let i=0;const ch=[];groups.forEach(([,items])=>items.forEach(m=>{if(m.order!==i)ch.push({...m,order:i});i++}));ch.forEach(saveMenuItem)}
+function renderReorder(){
+  const g=menuGroups(),arrow=(act,v,d,dis,label)=>`<button class="iconbtn" data-act="${act}" data-v="${esc(v)}" data-d="${d}" ${dis?'disabled':''} aria-label="${esc(label)}">${d<0?'▲':'▼'}</button>`;
+  $('view').innerHTML=`<div class="scroll"><div class="narrow"><div class="daybar"><h2>จัดลำดับเมนู</h2><button class="btn main" data-act="reorder" style="margin-left:auto">เสร็จแล้ว</button></div>
+  <p class="muted">กด ▲ ▼ เพื่อเลื่อน ลำดับนี้ใช้กับหน้าขายทุกเครื่อง</p>
+  ${g.map(([c,items],gi)=>`<section class="panel"><div class="daybar"><h3 style="margin:0">${esc(c)}</h3><span style="margin-left:auto"></span>${arrow('cat-move',c,-1,gi===0,'เลื่อนหมวด '+c+' ขึ้น')}${arrow('cat-move',c,1,gi===g.length-1,'เลื่อนหมวด '+c+' ลง')}</div>
+  <div class="list">${items.map((m,i)=>`<div class="li"><span class="num muted">${i+1}</span><div class="g">${esc(m.name)}</div>${arrow('item-move',m.id,-1,i===0,'เลื่อน '+m.name+' ขึ้น')}${arrow('item-move',m.id,1,i===items.length-1,'เลื่อน '+m.name+' ลง')}</div>`).join('')}</div></section>`).join('')}
+  </div></div>`;
+}
 function renderMenu(){
-  $('view').innerHTML=`<div class="scroll"><div class="narrow"><div class="daybar"><h2>เมนู ${S.menu.length} รายการ</h2><button class="btn main" data-act="edit-menu">เพิ่มเมนู</button></div>
+  if(S.reorder)return renderReorder();
+  $('view').innerHTML=`<div class="scroll"><div class="narrow"><div class="daybar"><h2>เมนู ${S.menu.length} รายการ</h2>${S.menu.length>1?'<button class="btn" data-act="reorder" style="margin-left:auto">จัดลำดับ</button>':''}<button class="btn main" data-act="edit-menu">เพิ่มเมนู</button></div>
   ${S.menu.length?'<div class="list">'+S.menu.map(m=>`<div class="li"><div class="g"><b>${esc(m.name)}</b> ${m.soldOut?'<span class="pill">หมด</span>':''}<small>${esc(m.cat||'')} · ${Object.entries(m.prices).map(([k,v])=>(k==='ราคาเดียว'?'':k+' ')+v).join(' / ')} บาท</small></div><button class="btn" data-act="soldout" data-id="${esc(m.id)}">${m.soldOut?'มีขาย':'ของหมด'}</button><button class="btn" data-act="edit-menu" data-id="${esc(m.id)}">แก้ไข</button></div>`).join('')+'</div>':`<div class="empty"><div>ยังไม่มีเมนู</div><button class="btn" data-act="starter">นำเข้าเมนูชาบัง 46 รายการ</button></div>`}</div></div>`;
 }
 function pushSection(){
@@ -369,6 +380,7 @@ function printBill(s){if(!s)return;
   $('print').innerHTML=`<h1>${esc(S.config.name)}</h1><p>บิล #${s.no} · ${esc(s.mode||'')}<br>${new Date(s.ts).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}</p><hr>`+s.lines.map(l=>`<div class="pl"><span>${l.qty} ${esc(l.name)}</span><span>${lineTotal(l)}</span></div><small>${esc([l.type,l.sweet,...(l.addons||[]).map(a=>a.name)].filter(Boolean).join(' · '))}</small>`).join('')+`<hr>${s.discount?`<div class="pl"><span>ส่วนลด</span><span>-${s.discount}</span></div>`:''}<div class="pl tot"><span>รวม</span><span>${s.total} บาท</span></div><div class="pl"><span>${esc(s.pay)}</span><span>${s.pay==='เงินสด'?s.received:s.total}</span></div>${s.pay==='เงินสด'?`<div class="pl"><span>เงินทอน</span><span>${s.change}</span></div>`:''}<p class="thx">ขอบคุณครับ/ค่ะ</p>`;
   window.print()}
 function focusKey(el){const d=el.dataset||{};if(!d.act)return el.id?'#'+CSS.escape(el.id):null;return '[data-act="'+d.act+'"]'+['v','k','i','id','t','d'].filter(x=>d[x]!=null).map(x=>'[data-'+x+'="'+CSS.escape(d[x])+'"]').join('')}
+function refocus(d){const sel=`[data-act="${d.act}"][data-v="${CSS.escape(d.v)}"]`,el=document.querySelector(sel+`[data-d="${d.d}"]:not([disabled])`)||document.querySelector(sel+':not([disabled])');if(el)el.focus({preventScroll:true})}
 function openModal(m){if(!S.modal){const a=document.activeElement;S.opener=a&&a!==document.body?focusKey(a):null}S.modal=m;renderModal()}
 function closeModal(){S.modal=null;render();const k=S.opener;S.opener=null;if(k){const el=document.querySelector(k);if(el)el.focus({preventScroll:true})}}
 document.addEventListener('keydown',e=>{
@@ -402,7 +414,7 @@ function dailyText(){const days=rangeDays(S.range,S.viewDay),r=summary(days);ret
 /* ---------- events ---------- */
 const ACT={
  theme(){const t=THEMES[themeMode()].next;applyTheme(t);toast('ใช้ธีม'+THEMES[t].label+(t==='auto'?' ตามการตั้งค่าของเครื่อง':''))},
- tab(d){S.tab=d.v;S.modal=null;if(d.v==='sales')loadRange();else render()},
+ tab(d){S.tab=d.v;S.modal=null;S.reorder=false;if(d.v==='sales')loadRange();else render()},
  range(d){S.range=d.v;loadRange()},
  'open-day'(d){S.range='day';S.viewDay=d.v;loadRange()},cat(d){if(S.cat!==d.v){S.cat=d.v;S.swap=true;renderSell();S.swap=false;const g=document.querySelector('.grid');if(g)g.scrollTop=0}},mode(d){S.cart.mode=d.v;saveCart();renderSell()},
  pick(d){const it=S.menu.find(m=>m.id===d.id);if(!it||it.soldOut)return;const types=Object.keys(it.prices);
@@ -430,6 +442,11 @@ const ACT={
  void(d){openModal({type:'void',sale:salesOf(S.viewDay).find(s=>s.id===d.id)})},
  expense(){openModal({type:'expense'})},
  staff(){openModal({type:'staff'})},
+ reorder(){S.reorder=!S.reorder;render();if(!S.reorder)toast('บันทึกลำดับเมนูแล้ว')},
+ 'item-move'(d){const g=menuGroups();for(const [,items] of g){const i=items.findIndex(m=>m.id===d.v),j=i+(+d.d);if(i>=0){if(j<0||j>=items.length)return;[items[i],items[j]]=[items[j],items[i]];break}}
+  const sc=document.querySelector('#view .scroll')?.scrollTop||0;applyOrder(g);render();const s=document.querySelector('#view .scroll');if(s)s.scrollTop=sc;refocus(d)},
+ 'cat-move'(d){const g=menuGroups(),i=g.findIndex(x=>x[0]===d.v),j=i+(+d.d);if(i<0||j<0||j>=g.length)return;[g[i],g[j]]=[g[j],g[i]];
+  const sc=document.querySelector('#view .scroll')?.scrollTop||0;applyOrder(g);render();const s=document.querySelector('#view .scroll');if(s)s.scrollTop=sc;refocus(d)},
  'push-on'(){pushOn()},
  'push-off'(){const me=pushMe();if(me)S.db.collection('push').doc(me.id).delete().then(()=>toast('ปิดการแจ้งเตือนบนเครื่องนี้แล้ว')).catch(()=>toast('ปิดไม่สำเร็จ ตรวจอินเทอร์เน็ต'))},
  'push-del'(d){S.db.collection('push').doc(d.id).delete().then(()=>toast('เลิกส่งแจ้งเตือนไปเครื่องนั้นแล้ว')).catch(()=>{})},
