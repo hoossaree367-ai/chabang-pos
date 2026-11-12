@@ -1,5 +1,5 @@
 // Keeps the POS page openable with no internet: always try the network first, fall back to the saved copy.
-const CACHE='chabang-pos-v1';
+const CACHE='chabang-pos-v2';
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','manifest.webmanifest','icon-192.png'])))});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{

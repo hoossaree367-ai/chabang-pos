@@ -29,14 +29,14 @@ function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 
 const TYPES=['แก้ว','ถุง/ถัง','ปั่น','ราคาเดียว'];
 const SWEET=['หวานปกติ','หวานน้อย','หวาน 25%','ไม่หวาน'];
-const DEFAULT_CONFIG={name:'ชาบัง',promptpay:'',addons:''};
+const DEFAULT_CONFIG={name:'CHABANG',promptpay:'',addons:''};
 const SHOP_MENU=[{"id": "m01", "name": "นมเย็น", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 0}, {"id": "m02", "name": "ไมโลเย็น", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 1}, {"id": "m03", "name": "ชาเขียวดำเย็น", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 2}, {"id": "m04", "name": "โอเลี้ยงยกล้อ", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 3}, {"id": "m05", "name": "ชาโบ", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 4}, {"id": "m06", "name": "น้ำบ๊วย", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 5}, {"id": "m07", "name": "โอเลี้ยง", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 6}, {"id": "m08", "name": "ชาดำ", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 7}, {"id": "m09", "name": "ชาเขียวมะนาว", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 8}, {"id": "m10", "name": "แดง/เขียว มะนาว", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 9}, {"id": "m11", "name": "แดง/เขียว โซดา", "cat": "เมนูยอดนิยม", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 10}, {"id": "m12", "name": "เนสโล", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 11}, {"id": "m13", "name": "ชาโล", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 12}, {"id": "m14", "name": "มอคค่า", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 13}, {"id": "m15", "name": "มอคค่าโบราณ", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 14}, {"id": "m16", "name": "ชาโกโก้", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 15}, {"id": "m17", "name": "ชาเขียวโล", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 16}, {"id": "m18", "name": "ชาเขียวโกโก้", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 17}, {"id": "m19", "name": "นมสดเย็น", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 18}, {"id": "m20", "name": "นมสดคาราเมล", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 19}, {"id": "m21", "name": "นมสดวานิลา", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 20}, {"id": "m22", "name": "ชาโคลน", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35, "ถุง/ถัง": 45, "ปั่น": 50}, "sweet": true, "order": 21}, {"id": "m23", "name": "โอดิบ", "cat": "เมนูพิเศษ", "prices": {"แก้ว": 35}, "sweet": true, "order": 22}, {"id": "m24", "name": "กีวี่โซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 23}, {"id": "m25", "name": "องุ่นโซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 24}, {"id": "m26", "name": "ลิ้นจี่โซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 25}, {"id": "m27", "name": "เสาวรสโซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 26}, {"id": "m28", "name": "แอปเปิ้ลโซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 27}, {"id": "m29", "name": "สตรอเบอร์รี่โซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 28}, {"id": "m30", "name": "บลูฮาวายโซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 29}, {"id": "m31", "name": "บลูเบอร์รี่โซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 30}, {"id": "m32", "name": "บ๊วยมะนาว", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 31}, {"id": "m33", "name": "บ๊วยโซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 32}, {"id": "m34", "name": "บ๊วยมะนาวโซดา", "cat": "อิตาเลี่ยนโซดา", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 33}, {"id": "m35", "name": "ชาไทย", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 34}, {"id": "m36", "name": "เนสกาแฟ", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 35}, {"id": "m37", "name": "กาแฟโบราณ", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 36}, {"id": "m38", "name": "ชาเขียวนม", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 37}, {"id": "m39", "name": "ชานม", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 38}, {"id": "m40", "name": "ชามะนาว", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 39}, {"id": "m41", "name": "มะนาวโซดา", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 40}, {"id": "m42", "name": "แดง/เขียวมะนาวโซดา", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 41}, {"id": "m43", "name": "น้ำส้มคั้น", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 42}, {"id": "m44", "name": "โกโก้", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 30, "ถุง/ถัง": 40, "ปั่น": 45}, "sweet": true, "order": 43}, {"id": "m45", "name": "อเมริกาโน", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 40}, "sweet": true, "order": 44}, {"id": "m46", "name": "กาแฟส้ม", "cat": "เมนูแนะนำ", "prices": {"แก้ว": 40}, "sweet": true, "order": 45}];
 
 /* ---------- state ---------- */
-const S={tab:'sell',cat:'ทั้งหมด',menu:lsGet('pos.menu',[]),config:{...DEFAULT_CONFIG,...lsGet('pos.config',{})},
-  cart:lsGet('pos.cart',{lines:[],discount:0,mode:'ทานที่ร้าน'}),today:[],todayKey:dayKey(),viewDay:dayKey(),range:'day',dayCache:{},dayFetched:{},loading:false,loadErr:false,
-  queue:lsGet('pos.queue',[]),db:null,mode:'loading',menuLoaded:false,stale:false,downloads:null,modal:null,inflight:new Set()};
-const saveCart=()=>lsSet('pos.cart',S.cart);
+const S={tab:'sell',cat:'ทั้งหมด',menu:lsGet('chabang.menu',[]),config:{...DEFAULT_CONFIG,...lsGet('chabang.config',{})},
+  cart:lsGet('chabang.cart',{lines:[],discount:0,mode:'ทานที่ร้าน'}),today:[],todayKey:dayKey(),viewDay:dayKey(),range:'day',dayCache:{},dayFetched:{},loading:false,loadErr:false,
+  queue:lsGet('chabang.queue',[]),db:null,mode:'loading',menuLoaded:false,stale:false,downloads:null,modal:null,inflight:new Set()};
+const saveCart=()=>lsSet('chabang.cart',S.cart);
 const $=id=>document.getElementById(id);
 function toast(t){$('toast').innerHTML='<div class="toast" role="status">'+esc(t)+'</div>';clearTimeout(toast.t);toast.t=setTimeout(()=>{$('toast').innerHTML=''},2600)}
 
@@ -48,7 +48,7 @@ function salesOf(day){
   return [...m.values()].sort((a,b)=>b.ts-a.ts);
 }
 function writeSale(sale){
-  S.queue=S.queue.filter(x=>x.id!==sale.id);S.queue.push(sale);lsSet('pos.queue',S.queue);flush();
+  S.queue=S.queue.filter(x=>x.id!==sale.id);S.queue.push(sale);lsSet('chabang.queue',S.queue);flush();
 }
 function flush(){
   if(!S.db)return;
@@ -57,7 +57,7 @@ function flush(){
     S.db.collection('days/'+sale.day+'/sales').doc(sale.id).set(sale).then(()=>{
       S.inflight.delete(sale.id);
       const cur=S.queue.find(x=>x.id===sale.id);
-      if(cur===sale){S.queue=S.queue.filter(x=>x!==sale);lsSet('pos.queue',S.queue);
+      if(cur===sale){S.queue=S.queue.filter(x=>x!==sale);lsSet('chabang.queue',S.queue);
         const list=sale.day===S.todayKey?S.today:(S.dayCache[sale.day]||null);
         if(list){const i=list.findIndex(x=>x.id===sale.id);if(i>=0)list[i]=sale;else list.push(sale)}
       }
@@ -67,11 +67,11 @@ function flush(){
   renderChrome();
 }
 function saveMenuItem(it){
-  const i=S.menu.findIndex(x=>x.id===it.id);if(i>=0)S.menu[i]=it;else S.menu.push(it);sortMenu();lsSet('pos.menu',S.menu);
+  const i=S.menu.findIndex(x=>x.id===it.id);if(i>=0)S.menu[i]=it;else S.menu.push(it);sortMenu();lsSet('chabang.menu',S.menu);
   if(S.db)S.db.collection('menu').doc(it.id).set(it).catch(()=>toast('บันทึกเมนูไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง'));
 }
-function deleteMenuItem(id){S.menu=S.menu.filter(x=>x.id!==id);lsSet('pos.menu',S.menu);if(S.db)S.db.collection('menu').doc(id).delete().catch(()=>toast('ลบเมนูไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง'))}
-function saveConfig(patch){S.config={...S.config,...patch};lsSet('pos.config',S.config);if(S.db)S.db.doc('config/shop').set(S.config).catch(()=>toast('บันทึกการตั้งค่าไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง'));renderChrome()}
+function deleteMenuItem(id){S.menu=S.menu.filter(x=>x.id!==id);lsSet('chabang.menu',S.menu);if(S.db)S.db.collection('menu').doc(id).delete().catch(()=>toast('ลบเมนูไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง'))}
+function saveConfig(patch){S.config={...S.config,...patch};lsSet('chabang.config',S.config);if(S.db)S.db.doc('config/shop').set(S.config).catch(()=>toast('บันทึกการตั้งค่าไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง'));renderChrome()}
 function sortMenu(){S.menu.sort((a,b)=>(a.order??999)-(b.order??999)||a.name.localeCompare(b.name,'th'))}
 function listenToday(){
   if(listenToday.u)listenToday.u();
@@ -111,10 +111,10 @@ function start(){
   const timer=setTimeout(()=>{S.stale=true;S.menuLoaded=true;render()},10000);
   unsubs.push(db.collection('menu').onSnapshot(s=>{
     if(!s.metadata.fromCache){clearTimeout(timer);S.stale=false;S.denied=false;S.menuLoaded=true}
-    if(!s.metadata.fromCache||s.size){S.menu=s.docs.map(d=>({...d.data()}));sortMenu();lsSet('pos.menu',S.menu)}
+    if(!s.metadata.fromCache||s.size){S.menu=s.docs.map(d=>({...d.data()}));sortMenu();lsSet('chabang.menu',S.menu)}
     if(!S.modal)render();else renderChrome();
   },e=>{clearTimeout(timer);deny(e)}));
-  unsubs.push(db.doc('config/shop').onSnapshot(s=>{if(s.exists){S.config={...DEFAULT_CONFIG,...s.data()};lsSet('pos.config',S.config);renderChrome()}},deny));
+  unsubs.push(db.doc('config/shop').onSnapshot(s=>{if(s.exists){S.config={...DEFAULT_CONFIG,...s.data()};if(/with\s*you/i.test(S.config.name||'')){saveConfig({name:DEFAULT_CONFIG.name});toast('เปลี่ยนชื่อร้านเป็น '+DEFAULT_CONFIG.name+' แล้ว ตรวจเลขพร้อมเพย์ในแท็บตั้งค่าด้วย')}lsSet('chabang.config',S.config);renderChrome()}},deny));
   listenToday();flush();render();
 }
 function stop(){unsubs.forEach(u=>u());unsubs=[];if(listenToday.u){listenToday.u();listenToday.u=null}S.db=null}
@@ -134,12 +134,12 @@ const THEMES={auto:{label:'อัตโนมัติ',next:'light',icon:'<svg 
  light:{label:'สว่าง',next:'dark',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'},
  dark:{label:'มืด',next:'auto',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>'}};
 function themeMode(){const v=document.documentElement.getAttribute('data-theme');return v==='light'||v==='dark'?v:'auto'}
-function applyTheme(m){if(m==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);try{localStorage.setItem('pos.theme',m)}catch(e){}
+function applyTheme(m){if(m==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);try{localStorage.setItem('chabang.theme',m)}catch(e){}
   const dark=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const meta=document.querySelector('meta[name=theme-color]');if(meta)meta.content=dark?'#1D2127':'#4D2420';renderTheme()}
 function renderTheme(){const b=$('themebtn');if(!b)return;const m=themeMode(),t=THEMES[m];b.innerHTML=t.icon+'<span class="tl">'+t.label+'</span>';b.setAttribute('aria-label','ธีม '+t.label+' แตะเพื่อเปลี่ยนเป็น'+THEMES[t.next].label)}
 function renderChrome(){
   renderTheme();
-  $('brand').textContent=S.config.name||'ชาบัง';
+  $('brand').textContent=S.config.name||'CHABANG';
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.v===S.tab));
   $('sync').innerHTML=S.queue.length?'<span class="pill wait">รอส่ง '+S.queue.length+' รายการ</span>':S.stale?'<span class="pill wait">ออฟไลน์</span>':'';
   let n='';
