@@ -172,8 +172,14 @@ function renderSell(){
   <div class="row"><button class="sbtn" data-act="discount">ส่วนลด</button><span class="num">${t.disc?'−'+baht(t.disc):'—'}</span></div>
   <div class="row"><span>ยอดชำระ</span><span class="total num${S.bump?' bump':''}">${baht(t.total)}</span></div>
   <div class="pay"><button class="btn main" data-act="cash" ${S.cart.lines.length?'':'disabled'}>เงินสด</button><button class="btn main" data-act="qr" ${S.cart.lines.length?'':'disabled'}>พร้อมเพย์</button></div>
-  ${S.cart.lines.length?'<button class="sbtn danger" data-act="clear">ล้างบิล</button>':'<button class="sbtn" data-act="expense">จ่ายเงินซื้อของ</button>'}</div></aside></div>`;
+  ${S.cart.lines.length?'<button class="sbtn danger" data-act="clear">ล้างบิล</button>':'<button class="sbtn" data-act="expense">จ่ายเงินซื้อของ</button>'}</div></aside></div>
+  ${S.cart.lines.length?`<button class="minibar" data-act="to-bill" aria-label="ดูบิล ${S.cart.lines.reduce((a,l)=>a+l.qty,0)} รายการ ยอด ${t.total} บาท"><span class="mb-n num">${S.cart.lines.reduce((a,l)=>a+l.qty,0)}</span><span class="mb-t">ดูบิลและรับเงิน</span><span class="mb-v num">${baht(t.total)}</span></button>`:''}`;
+  watchBill();
   const g=document.querySelector('.grid');if(g)g.scrollTop=scroll;
+}
+function watchBill(){
+  if(watchBill.o)watchBill.o.disconnect();const b=document.querySelector('.bill'),m=document.querySelector('.minibar');if(!b||!m||!window.IntersectionObserver)return;
+  watchBill.o=new IntersectionObserver(es=>{const v=es[0].isIntersecting;m.classList.toggle('away',v);m.setAttribute('aria-hidden',v?'true':'false');m.tabIndex=v?-1:0},{threshold:.35});watchBill.o.observe(b);
 }
 function isCup(l){return l.type==='แก้ว'||l.type==='ถุง/ถัง'||l.type==='ปั่น'}
 function catOf(l){if(l.cat)return l.cat;const m=S.menu.find(x=>x.id===l.mid&&x.name===l.name)||S.menu.find(x=>x.name===l.name);return m&&m.cat||'อื่น ๆ'}
@@ -356,6 +362,7 @@ const ACT={
  day(d){const n=shiftAnchor(S.range,S.viewDay,+d.d);if(rangeDays(S.range,n)[0]>S.todayKey)return;S.viewDay=n>S.todayKey?S.todayKey:n;loadRange()},
  void(d){openModal({type:'void',sale:salesOf(S.viewDay).find(s=>s.id===d.id)})},
  expense(){openModal({type:'expense'})},
+ 'to-bill'(){const b=document.querySelector('.bill');if(!b)return;const smooth=!matchMedia('(prefers-reduced-motion: reduce)').matches;b.scrollIntoView({behavior:smooth?'smooth':'auto',block:'end'});const h=b.querySelector('.bill-h h2');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}},
  'e-name'(d){$('e-item').value=d.v;$('e-amt').focus()},
  'void-ok'(){S.lastVoidExp=S.modal.sale.kind==='expense';writeSale({...S.modal.sale,voided:true,voidedAt:Date.now()});closeModal();toast(S.lastVoidExp?'ยกเลิกรายการจ่ายแล้ว':'ยกเลิกบิลแล้ว')},
  'edit-menu'(d){const it=d.id?S.menu.find(m=>m.id===d.id):{};openModal({type:'editMenu',item:{...it}})},

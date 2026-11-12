@@ -124,6 +124,7 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
 .center{text-align:center}
 .muted{color:var(--muted);font-size:14px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:8px;z-index:30;max-width:90%}
+.minibar{display:none}
 @media (max-width:720px){
   html,body{height:auto}
   .app{height:auto;display:flex;flex-direction:column}
@@ -133,7 +134,15 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
   .tabs{margin-left:0;width:100%}.tab{flex:1;padding:9px 4px}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.two{grid-template-columns:minmax(0,1fr)}
   .scroll{height:auto;overflow:visible}
+  .sell:has(.minibar){padding-bottom:84px}
+  .minibar{display:flex;position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:20;align-items:center;gap:12px;min-height:56px;padding:8px 16px 8px 8px;border-radius:12px;background:var(--leaf);color:var(--leaf-ink);font-weight:600;box-shadow:0 6px 16px rgba(0,0,0,.28)}
+  .minibar:hover{background:var(--leaf-hover)}.minibar:active{background:var(--leaf-press)}
+  .minibar:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+  .minibar.away{opacity:0;pointer-events:none;transform:translateY(16px)}
+  .mb-n{min-width:40px;height:40px;border-radius:9px;display:grid;place-items:center;background:var(--leaf-ink);color:var(--leaf);font-size:18px}
+  .mb-t{flex:1;text-align:left}.mb-v{font-size:20px}
 }
+@media (prefers-reduced-motion:no-preference){.minibar{transition:opacity .15s,transform .15s,background .12s}}
 @media (prefers-reduced-motion:no-preference){.tile,.chip,.btn{transition:background .12s}}
 
 .gate{height:100%;display:grid;place-items:center;padding-inline:max(16px,env(safe-area-inset-left,0px))}
