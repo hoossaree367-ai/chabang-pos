@@ -1,5 +1,5 @@
 import qrcode from 'qrcode-generator';
-import {db as backendDb,onUser,login,logout} from './backend.js';
+import {db as backendDb,onUser,login,logout,pushSupported,pushToken,idToken} from './backend.js';
 
 /* ---------- pure helpers ---------- */
 function crc16(s){let c=0xFFFF;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}return c.toString(16).toUpperCase().padStart(4,'0')}
@@ -35,7 +35,7 @@ const SHOP_MENU=[{"id": "m01", "name": "นมเย็น", "cat": "เมน�
 /* ---------- state ---------- */
 const S={tab:'sell',cat:'ทั้งหมด',menu:lsGet('chabang.menu',[]),config:{...DEFAULT_CONFIG,...lsGet('chabang.config',{})},
   cart:lsGet('chabang.cart',{lines:[],discount:0,mode:'ทานที่ร้าน'}),today:[],todayKey:dayKey(),viewDay:dayKey(),range:'day',dayCache:{},dayFetched:{},loading:false,loadErr:false,
-  queue:lsGet('chabang.queue',[]),staff:lsGet('chabang.staff',''),db:null,mode:'loading',menuLoaded:false,stale:false,downloads:null,modal:null,inflight:new Set()};
+  queue:lsGet('chabang.queue',[]),staff:lsGet('chabang.staff',''),push:[],pushId:lsGet('chabang.pushId',''),db:null,mode:'loading',menuLoaded:false,stale:false,downloads:null,modal:null,inflight:new Set()};
 const saveCart=()=>lsSet('chabang.cart',S.cart);
 const $=id=>document.getElementById(id);
 function toast(t){$('toast').innerHTML='<div class="toast" role="status">'+esc(t)+'</div>';clearTimeout(toast.t);toast.t=setTimeout(()=>{$('toast').innerHTML=''},2600)}
@@ -115,7 +115,37 @@ function start(){
     if(!S.modal)render();else renderChrome();
   },e=>{clearTimeout(timer);deny(e)}));
   unsubs.push(db.doc('config/shop').onSnapshot(s=>{if(s.exists){S.config={...DEFAULT_CONFIG,...s.data()};if(/with\s*you/i.test(S.config.name||'')){saveConfig({name:DEFAULT_CONFIG.name});toast('เปลี่ยนชื่อร้านเป็น '+DEFAULT_CONFIG.name+' แล้ว ตรวจเลขพร้อมเพย์ในแท็บตั้งค่าด้วย')}lsSet('chabang.config',S.config);renderChrome()}},deny));
+  unsubs.push(db.collection('push').onSnapshot(s=>{S.push=s.docs.map(d=>({...d.data()}));if(!syncPush.done){syncPush.done=true;syncPush()}if(S.tab==='config'&&!S.modal)render()},()=>{}));
   listenToday();flush();render();
+}
+/* ---------- push notifications ---------- */
+const PUSH_KINDS=[['bill','ทุกบิล'],['void','ยกเลิกบิล'],['expense','จ่ายซื้อของ'],['close','ปิดยอด']];
+const pushMe=()=>S.pushId&&S.push.find(p=>p.id===S.pushId);
+function deviceName(){const u=navigator.userAgent;return /iPad|Macintosh.*Mobile/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?'Android':'คอมพิวเตอร์'}
+function sendPush(tokens,title,body,tag){
+  const url=S.config.pushUrl;if(!url)return Promise.reject(new Error('nourl'));if(!tokens.length)return Promise.resolve({ok:true,results:[]});
+  return idToken().then(it=>fetch(url,{method:'POST',body:JSON.stringify({idToken:it,tokens,title,body,tag})})).then(r=>r.json()).then(j=>{
+    (j&&j.results||[]).forEach((c,i)=>{if(c===404){const d=S.push.find(x=>x.token===tokens[i]);if(d&&S.db)S.db.collection('push').doc(d.id).delete().catch(()=>{})}});return j});
+}
+function notify(kind,title,body,tag){
+  if(!S.config.pushUrl||!navigator.onLine)return;
+  const toks=S.push.filter(p=>p.id!==S.pushId&&p.prefs&&p.prefs[kind]&&p.token).map(p=>p.token);
+  if(toks.length)sendPush(toks,title,body,tag).catch(()=>{});
+}
+async function syncPush(){const me=pushMe();if(!me||!('Notification' in window)||Notification.permission!=='granted')return;
+  try{const reg=await navigator.serviceWorker.ready,tok=await pushToken(reg);if(tok&&tok!==me.token)S.db.collection('push').doc(me.id).set({...me,token:tok,ts:Date.now()})}catch(e){}}
+async function pushOn(){
+  const ios=/iPhone|iPad/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1),standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(!('Notification' in window)||!('serviceWorker' in navigator)){toast(ios&&!standalone?'บน iPhone/iPad ต้องกดแชร์ แล้วเพิ่มไปยังหน้าจอโฮม จากนั้นเปิดแอปจากไอคอนก่อน':'เครื่องหรือเบราว์เซอร์นี้ยังรับการแจ้งเตือนไม่ได้');return}
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){toast('ยังไม่ได้อนุญาตการแจ้งเตือน เปิดได้ที่การตั้งค่าของเครื่อง');return}
+  if(!(await pushSupported())){toast(ios&&!standalone?'บน iPhone/iPad ต้องเปิดแอปจากไอคอนบนหน้าจอโฮม':'เบราว์เซอร์นี้ยังรับการแจ้งเตือนไม่ได้ ลองใช้ Chrome');return}
+  try{const reg=await navigator.serviceWorker.ready,token=await pushToken(reg);
+    const id=S.pushId||('d'+Date.now()+Math.random().toString(36).slice(2,6));S.pushId=id;lsSet('chabang.pushId',id);
+    const old=S.push.find(p=>p.id===id);
+    await S.db.collection('push').doc(id).set({id,token,prefs:old&&old.prefs||{bill:true,void:true,expense:true,close:true},device:deviceName(),name:S.staff||'',ts:Date.now()});
+    toast('เปิดการแจ้งเตือนบนเครื่องนี้แล้ว');render()}
+  catch(e){toast('เปิดการแจ้งเตือนไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง')}
 }
 function stop(){unsubs.forEach(u=>u());unsubs=[];if(listenToday.u){listenToday.u();listenToday.u=null}S.db=null}
 function setInvalid(on){['l-email','l-pw'].forEach(id=>{const e=$(id);if(on){e.setAttribute('aria-invalid','true');e.setAttribute('aria-describedby','loginerr')}else{e.removeAttribute('aria-invalid');e.removeAttribute('aria-describedby')}})}
@@ -269,13 +299,22 @@ function renderMenu(){
   $('view').innerHTML=`<div class="scroll"><div class="narrow"><div class="daybar"><h2>เมนู ${S.menu.length} รายการ</h2><button class="btn main" data-act="edit-menu">เพิ่มเมนู</button></div>
   ${S.menu.length?'<div class="list">'+S.menu.map(m=>`<div class="li"><div class="g"><b>${esc(m.name)}</b> ${m.soldOut?'<span class="pill">หมด</span>':''}<small>${esc(m.cat||'')} · ${Object.entries(m.prices).map(([k,v])=>(k==='ราคาเดียว'?'':k+' ')+v).join(' / ')} บาท</small></div><button class="btn" data-act="soldout" data-id="${esc(m.id)}">${m.soldOut?'มีขาย':'ของหมด'}</button><button class="btn" data-act="edit-menu" data-id="${esc(m.id)}">แก้ไข</button></div>`).join('')+'</div>':`<div class="empty"><div>ยังไม่มีเมนู</div><button class="btn" data-act="starter">นำเข้าเมนูชาบัง 46 รายการ</button></div>`}</div></div>`;
 }
+function pushSection(){
+  const me=pushMe(),others=S.push.filter(p=>p.id!==S.pushId);
+  const mine=me?`<p>เครื่องนี้รับแจ้งเตือนอยู่ เลือกเรื่องที่ต้องการ</p><div class="chips">${PUSH_KINDS.map(([k,l])=>`<button type="button" class="chip ${me.prefs&&me.prefs[k]?'on':''}" data-act="push-pref" data-v="${k}">${l}</button>`).join('')}</div>
+   <div class="pay"><button type="button" class="btn" data-act="push-test">ทดสอบแจ้งเตือน</button><button type="button" class="btn danger" data-act="push-off">ปิดบนเครื่องนี้</button></div>`
+   :`<p class="muted">เปิดบนมือถือของเจ้าของร้าน แล้วจะมีแจ้งเตือนเด้งเมื่อเครื่องอื่นปิดบิล ยกเลิกบิล จ่ายซื้อของ หรือปิดยอด แม้ล็อกจออยู่ บน iPhone/iPad ต้องเปิดแอปจากไอคอนบนหน้าจอโฮม</p><button type="button" class="btn main" data-act="push-on" ${S.config.pushUrl?'':'disabled'}>เปิดการแจ้งเตือนบนเครื่องนี้</button>${S.config.pushUrl?'':'<p class="hint">ใส่ลิงก์ Apps Script ด้านบนแล้วกดบันทึกก่อน</p>'}`;
+  return `<section class="panel" style="margin-top:8px"><h3>แจ้งเตือนบนมือถือ</h3>${mine}${others.length?`<div class="muted" style="margin-top:10px">เครื่องอื่นที่รับแจ้งเตือน</div><div class="list">${others.map(p=>`<div class="li"><div class="g">${esc(p.device||'เครื่อง')}${p.name?' · '+esc(p.name):''}<small>${PUSH_KINDS.filter(([k])=>p.prefs&&p.prefs[k]).map(x=>x[1]).join(', ')||'ปิดทุกเรื่อง'}</small></div><button type="button" class="link danger" data-act="push-del" data-id="${esc(p.id)}">เลิกส่ง</button></div>`).join('')}</div>`:''}</section>`;
+}
 function renderConfig(){
   const c=S.config;
   $('view').innerHTML=`<div class="scroll"><form class="narrow" id="cfg" style="max-width:560px">
   <label class="field"><span>ชื่อร้าน</span><input id="c-name" value="${esc(c.name)}"></label>
   <label class="field"><span>เบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตร 13 หลัก หรือ e-Wallet 15 หลัก</span><input id="c-pp" inputmode="numeric" value="${esc(c.promptpay)}" placeholder="08xxxxxxxx"></label>
   <label class="field"><span>ตัวเลือกเพิ่ม บรรทัดละ 1 รายการ เขียนแบบ ชื่อ,ราคา</span><textarea id="c-add" rows="4">${esc(c.addons)}</textarea></label>
+  <label class="field"><span>ลิงก์ Apps Script สำหรับส่งแจ้งเตือน (ขึ้นต้นด้วย https://script.google.com/)</span><input id="c-push" inputmode="url" autocomplete="off" value="${esc(c.pushUrl||'')}" placeholder="https://script.google.com/macros/s/…/exec"></label>
   <button class="btn main" type="submit">บันทึกการตั้งค่า</button>
+  ${pushSection()}
   <p class="muted">เมนูและยอดขายเก็บออนไลน์ ล็อกอินบัญชีร้านจากเครื่องอื่นแล้วเห็นข้อมูลชุดเดียวกัน ถ้าเน็ตหลุด บิลจะรอในเครื่องและส่งเองเมื่อเน็ตกลับมา</p>
   <div class="row"><span class="muted">${esc(S.user&&S.user.email||'')}</span><button class="btn" type="button" data-act="logout">ออกจากระบบ</button></div></form></div>`;
 }
@@ -338,13 +377,14 @@ document.addEventListener('keydown',e=>{
   const t=e.target;if(t.classList&&t.classList.contains('tab')&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){const ts=[...document.querySelectorAll('.tab')];const n=ts[(ts.indexOf(t)+(e.key==='ArrowRight'?1:-1)+ts.length)%ts.length];n.click();const nn=document.querySelector('.tab[data-v="'+n.dataset.v+'"]');nn&&nn.focus()}
 });
 // 8: expose selected state of toggle-style buttons to assistive tech
-new MutationObserver(()=>{document.querySelectorAll('.cat,.seg button,.sheet .chip[data-act^="m-"]').forEach(b=>{const v=String(b.classList.contains('on'));if(b.getAttribute('aria-pressed')!==v)b.setAttribute('aria-pressed',v)});
+new MutationObserver(()=>{document.querySelectorAll('.cat,.seg button,.sheet .chip[data-act^="m-"],.chip[data-act="push-pref"]').forEach(b=>{const v=String(b.classList.contains('on'));if(b.getAttribute('aria-pressed')!==v)b.setAttribute('aria-pressed',v)});
   document.querySelectorAll('.tab').forEach(t=>{const v=t.getAttribute('aria-selected')==='true'?'0':'-1';if(t.getAttribute('tabindex')!==v)t.setAttribute('tabindex',v)})}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','aria-selected']});
 function finish(pay,extra){
   const t=billTotals(S.cart.lines,S.cart.discount),day=dayKey();
   const no=salesOf(day).reduce((a,s)=>Math.max(a,s.no||0),0)+1;
   const sale={id:'b'+Date.now()+Math.random().toString(36).slice(2,6),day,no,ts:Date.now(),lines:S.cart.lines,mode:S.cart.mode,sub:t.sub,discount:t.disc,total:t.total,pay,staff:S.staff||'',...extra};
-  writeSale(sale);S.cart={lines:[],discount:0,mode:S.cart.mode};saveCart();S.modal={type:'done',sale};render();
+  writeSale(sale);notify('bill','🧾 บิล #'+no+' '+baht(t.total),[pay,sale.staff,sale.lines.map(l=>l.name+(l.qty>1?' ×'+l.qty:'')).join(', ')].filter(Boolean).join(' · '),sale.id);
+  S.cart={lines:[],discount:0,mode:S.cart.mode};saveCart();S.modal={type:'done',sale};render();
 }
 function addLine(it,type,sweet,addonNames,qty=1){
   const ad=parseAddons(S.config.addons).filter(a=>addonNames.includes(a.name));
@@ -386,14 +426,24 @@ const ACT={
  void(d){openModal({type:'void',sale:salesOf(S.viewDay).find(s=>s.id===d.id)})},
  expense(){openModal({type:'expense'})},
  staff(){openModal({type:'staff'})},
+ 'push-on'(){pushOn()},
+ 'push-off'(){const me=pushMe();if(me)S.db.collection('push').doc(me.id).delete().then(()=>toast('ปิดการแจ้งเตือนบนเครื่องนี้แล้ว')).catch(()=>toast('ปิดไม่สำเร็จ ตรวจอินเทอร์เน็ต'))},
+ 'push-del'(d){S.db.collection('push').doc(d.id).delete().then(()=>toast('เลิกส่งแจ้งเตือนไปเครื่องนั้นแล้ว')).catch(()=>{})},
+ 'push-pref'(d){const me=pushMe();if(!me)return;const prefs={...me.prefs,[d.v]:!(me.prefs&&me.prefs[d.v])};me.prefs=prefs;render();S.db.collection('push').doc(me.id).set({...me,prefs}).catch(()=>toast('บันทึกไม่สำเร็จ'))},
+ 'push-test'(){const me=pushMe();if(!me)return;toast('กำลังส่งแจ้งเตือนทดสอบ');
+  sendPush([me.token],'🔔 ทดสอบแจ้งเตือน','CHABANG POS ส่งแจ้งเตือนมาที่เครื่องนี้ได้แล้ว','test').then(j=>toast(j&&j.ok&&j.results&&j.results[0]===200?'ส่งแล้ว ถ้าไม่เด้ง ตรวจว่าเครื่องเปิดเสียงแจ้งเตือนอยู่':'ส่งไม่สำเร็จ: '+(j&&j.error==='auth'?'อีเมลบัญชีร้านในสคริปต์ไม่ตรง':j&&j.error||('รหัส '+(j&&j.results||[]).join(',')))))
+   .catch(()=>toast('ติดต่อ Apps Script ไม่ได้ ตรวจลิงก์และการตั้งค่า "ผู้ที่มีสิทธิ์เข้าถึง: ทุกคน"'))},
  'staff-pick'(d){setStaff(d.v);closeModal();toast('เริ่มกะของ '+d.v)},
  float(){const o=summary([S.todayKey]).open;openModal({type:'float',buf:o?String(o.amount):''})},
  'float-ok'(){const day=dayKey(),amt=+S.modal.buf||0;writeSale({id:'o'+day,kind:'open',day,ts:Date.now(),amount:amt,staff:S.staff||'',total:0});closeModal();if(S.tab==='sales')loadRange();toast('บันทึกเงินทอนตั้งต้น '+baht(amt))},
  'close-day'(){if(S.viewDay!==S.todayKey){toast('ปิดยอดได้เฉพาะวันนี้');return}openModal({type:'closeDay',buf:''})},
- 'close-ok'(){const r=summary([S.todayKey]),got=+S.modal.buf||0,day=dayKey();writeSale({id:'c'+day,kind:'close',day,ts:Date.now(),counted:got,expected:r.drawer,diff:got-r.drawer,staff:S.staff||'',total:0});closeModal();loadRange();toast(got===r.drawer?'ปิดยอดแล้ว เงินตรงพอดี':'ปิดยอดแล้ว '+(got<r.drawer?'เงินขาด '+baht(r.drawer-got):'เงินเกิน '+baht(got-r.drawer)))},
+ 'close-ok'(){const r=summary([S.todayKey]),got=+S.modal.buf||0,day=dayKey();writeSale({id:'c'+day,kind:'close',day,ts:Date.now(),counted:got,expected:r.drawer,diff:got-r.drawer,staff:S.staff||'',total:0});
+  const df=got-r.drawer;notify('close','🔒 ปิดยอด '+(df===0?'เงินตรงพอดี':df<0?'เงินขาด '+baht(-df):'เงินเกิน '+baht(df)),'ขายวันนี้ '+baht(r.total)+' · นับได้ '+baht(got)+' · ควรมี '+sbaht(r.drawer)+(S.staff?' · '+S.staff:''),'close');closeModal();loadRange();toast(got===r.drawer?'ปิดยอดแล้ว เงินตรงพอดี':'ปิดยอดแล้ว '+(got<r.drawer?'เงินขาด '+baht(r.drawer-got):'เงินเกิน '+baht(got-r.drawer)))},
  'to-bill'(){const b=document.querySelector('.bill');if(!b)return;const smooth=!matchMedia('(prefers-reduced-motion: reduce)').matches;b.scrollIntoView({behavior:smooth?'smooth':'auto',block:'end'});const h=b.querySelector('.bill-h h2');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}},
  'e-name'(d){$('e-item').value=d.v;$('e-amt').focus()},
- 'void-ok'(){S.lastVoidExp=S.modal.sale.kind==='expense';writeSale({...S.modal.sale,voided:true,voidedAt:Date.now()});closeModal();toast(S.lastVoidExp?'ยกเลิกรายการจ่ายแล้ว':'ยกเลิกบิลแล้ว')},
+ 'void-ok'(){const vs=S.modal.sale;S.lastVoidExp=vs.kind==='expense';
+  notify('void',vs.kind==='expense'?'❌ ยกเลิกรายการจ่าย '+baht(vs.amount):'❌ ยกเลิกบิล #'+vs.no+' '+baht(vs.total),[vs.kind==='expense'?vs.item:vs.lines.map(l=>l.name).join(', '),S.staff&&'โดย '+S.staff].filter(Boolean).join(' · '),'v'+vs.id);
+  writeSale({...S.modal.sale,voided:true,voidedAt:Date.now()});closeModal();toast(S.lastVoidExp?'ยกเลิกรายการจ่ายแล้ว':'ยกเลิกบิลแล้ว')},
  'edit-menu'(d){const it=d.id?S.menu.find(m=>m.id===d.id):{};openModal({type:'editMenu',item:{...it}})},
  'del-ask'(){S.modal.confirmDel=true;renderModal()},'del-ok'(){deleteMenuItem(S.modal.item.id);closeModal();toast('ลบเมนูแล้ว')},
  soldout(d){const it=S.menu.find(m=>m.id===d.id);saveMenuItem({...it,soldOut:!it.soldOut});render()},
@@ -418,12 +468,14 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('submit',e=>{
   e.preventDefault();
-  if(e.target.id==='cfg'){saveConfig({name:$('c-name').value.trim()||'ร้านกาแฟ',promptpay:$('c-pp').value.trim(),addons:$('c-add').value});
+  if(e.target.id==='cfg'){const pu=$('c-push').value.trim();if(pu&&!/^https:\/\/script\.google\.com\//.test(pu)){toast('ลิงก์แจ้งเตือนต้องขึ้นต้นด้วย https://script.google.com/');return}
+    saveConfig({name:$('c-name').value.trim()||'ร้านกาแฟ',promptpay:$('c-pp').value.trim(),addons:$('c-add').value,pushUrl:pu});render();
     const pp=$('c-pp').value.trim();toast(pp&&!promptpayPayload(pp,1)?'เลขพร้อมเพย์ต้องมี 10, 13 หรือ 15 หลัก':'บันทึกการตั้งค่าแล้ว')}
   if(e.target.id==='sf'){const n=$('s-name').value.trim();if(!n){toast('พิมพ์ชื่อหรือแตะเลือกชื่อ');return}setStaff(n);closeModal();toast('เริ่มกะของ '+n)}
   if(e.target.id==='ef'){const item=$('e-item').value.trim(),amount=Math.round(+$('e-amt').value||0);
     if(!item||amount<=0){toast('ใส่ชื่อของและจำนวนเงิน');return}
     const day=dayKey();writeSale({id:'e'+Date.now()+Math.random().toString(36).slice(2,6),kind:'expense',day,ts:Date.now(),item,amount,note:$('e-note').value.trim(),staff:S.staff||'',pay:'เงินสด',total:0});
+    notify('expense','💸 จ่ายซื้อของ '+baht(amount),[item,$('e-note')&&$('e-note').value.trim(),S.staff].filter(Boolean).join(' · '));
     closeModal();if(S.tab==='sales')loadRange();toast('บันทึกจ่าย '+item+' '+baht(amount)+' แล้ว')}
   if(e.target.id==='mf'){const it=S.modal.item,prices={};TYPES.forEach((t,i)=>{const v=$('f-p'+i).value;if(v!=='')prices[t]=+v});
     if(!Object.keys(prices).length){toast('ใส่ราคาอย่างน้อย 1 ช่อง');return}

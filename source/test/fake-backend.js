@@ -10,3 +10,6 @@ let cb,user=JSON.parse(localStorage.getItem('__u')||'null');
 export const onUser=f=>{cb=f;setTimeout(()=>f(user),10);return()=>{}};
 export const login=async(e,p)=>{await wait();if(p!=='ok')throw{code:'auth/invalid-credential'};user={email:e};localStorage.setItem('__u',JSON.stringify(user));cb(user)};
 export const logout=async()=>{user=null;localStorage.removeItem('__u');cb(null)};
+export const pushSupported=async()=>!window.__noPush;
+export const pushToken=async()=>'fake-token-'+(localStorage.getItem('__ft')||(localStorage.setItem('__ft',Math.random().toString(36).slice(2)),localStorage.getItem('__ft')));
+export const idToken=async()=>'fake-id-token';

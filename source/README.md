@@ -81,3 +81,10 @@ service cloud.firestore {
 - พิมพ์ใบออเดอร์และใบเสร็จผ่าน Raspberry Pi โดย Pi รอรับงานพิมพ์จาก Firebase แล้วสั่งเครื่องพิมพ์ ESC/POS เป็นภาพ raster เพื่อให้ภาษาไทยไม่เพี้ยน
 - สถานะบิลรอชำระ
 - ระบบสต๊อกวัตถุดิบ
+
+## แจ้งเตือนบนมือถือ (เพิ่มในร้านชาบัง)
+
+- เครื่องที่เปิดรับแจ้งเตือนบันทึกที่ `push/{deviceId}` = `{id, token, prefs:{bill,void,expense,close}, device, name, ts}`
+- เมื่อมีบิล ยกเลิก จ่ายซื้อของ หรือปิดยอด เครื่องที่ทำรายการส่ง `{idToken, tokens, title, body, tag}` ไปที่ลิงก์ Apps Script (`config/shop.pushUrl`)
+- `notify-relay.gs` ตรวจ idToken ว่าเป็นบัญชีร้าน แล้วส่งผ่าน FCM HTTP v1 ด้วย service account ของเจ้าของ ส่วน `src/sw.js` รับ push แล้วแสดงแจ้งเตือน
+- ไฟล์กุญแจ service account อยู่ใน Apps Script ของเจ้าของเท่านั้น ห้ามใส่ใน repo

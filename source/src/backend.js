@@ -2,6 +2,7 @@
 import {initializeApp} from 'firebase/app';
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from 'firebase/auth';
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,getDocs,onSnapshot} from 'firebase/firestore';
+import {getMessaging,getToken,isSupported} from 'firebase/messaging';
 const app=initializeApp({
   apiKey:"AIzaSyAo79Ba45JpLmTpq-4cAdSCqLj0k6IFXlw",
   authDomain:"pos-chabang.firebaseapp.com",
@@ -22,3 +23,7 @@ export const db={
 export const onUser=fn=>onAuthStateChanged(auth,fn);
 export const login=(email,pw)=>signInWithEmailAndPassword(auth,email,pw);
 export const logout=()=>signOut(auth);
+// Push notifications: the token identifies this device to Firebase Cloud Messaging; the ID token proves to the Apps Script relay that the caller is the shop account.
+export const pushSupported=()=>isSupported().catch(()=>false);
+export const pushToken=reg=>getToken(getMessaging(app),{serviceWorkerRegistration:reg});
+export const idToken=()=>auth.currentUser?auth.currentUser.getIdToken():Promise.reject(new Error('not signed in'));
