@@ -133,6 +133,10 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
 .li.st-low{box-shadow:inset 4px 0 0 var(--amber)}.li.st-out{box-shadow:inset 4px 0 0 var(--cherry)}
 .tab{position:relative}.tab .badge{display:inline-block;min-width:20px;margin-left:4px;padding:0 6px;border-radius:10px;background:var(--cherry);color:var(--raised);font:600 12px/20px var(--body)}
 @media (max-width:720px){.tab .badge{position:absolute;top:2px;right:2px;margin:0;min-width:18px;padding:0 5px;line-height:18px}.st3 button{padding:0 8px}.li.stock{flex-wrap:wrap}.li.stock .g{min-width:100%}}
+.stname{display:flex!important;align-items:center;gap:10px;flex:1;min-height:52px;padding:8px 12px;margin:-4px 0;border:1px solid var(--line);border-radius:10px;background:var(--raised);text-align:left;box-shadow:var(--lift-sm)}
+.stname .stn{display:grid;flex:1;min-width:0}.stedit{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--leaf);font-size:13px;font-weight:600}
+@media (hover:hover){.stname:hover{border-color:var(--leaf-ring);background:var(--leaf-soft)}}
+.stname:active{background:var(--leaf-soft);transform:translateY(1px)}
 .minibar{display:none}
 @media (max-width:720px){
   html,body{height:auto}
