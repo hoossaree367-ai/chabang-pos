@@ -126,6 +126,13 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
 .toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:8px;z-index:30;max-width:90%}
 .staffbtn .sl{color:var(--muted)}
 .tile .pbs.four{display:grid;grid-template-columns:1fr 1fr}.tile .pbs.four .pb{min-width:0;flex-direction:row;gap:4px}
+.st3{display:flex;gap:4px;flex:none}.st3 button{min-height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--raised);font-weight:500}
+.st3 button.on.ok{background:var(--leaf-soft);color:var(--leaf);border-color:var(--leaf-ring);font-weight:600}
+.st3 button.on.low{background:var(--amber-soft);color:var(--amber);border-color:var(--amber)}
+.st3 button.on.out{background:var(--cherry-soft);color:var(--cherry);border-color:var(--cherry)}
+.li.st-low{box-shadow:inset 4px 0 0 var(--amber)}.li.st-out{box-shadow:inset 4px 0 0 var(--cherry)}
+.tab{position:relative}.tab .badge{display:inline-block;min-width:20px;margin-left:4px;padding:0 6px;border-radius:10px;background:var(--cherry);color:var(--raised);font:600 12px/20px var(--body)}
+@media (max-width:720px){.tab .badge{position:absolute;top:2px;right:2px;margin:0;min-width:18px;padding:0 5px;line-height:18px}.st3 button{padding:0 8px}.li.stock{flex-wrap:wrap}.li.stock .g{min-width:100%}}
 .minibar{display:none}
 @media (max-width:720px){
   html,body{height:auto}
@@ -281,6 +288,7 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
       <button class="tab" role="tab" data-act="tab" data-v="sell">ขาย</button>
       <button class="tab" role="tab" data-act="tab" data-v="sales">ยอดขาย</button>
       <button class="tab" role="tab" data-act="tab" data-v="menu">เมนู</button>
+      <button class="tab" role="tab" data-act="tab" data-v="stock">สต๊อก</button>
       <button class="tab" role="tab" data-act="tab" data-v="config">ตั้งค่า</button>
     </nav>
   </header>

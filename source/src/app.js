@@ -36,7 +36,7 @@ const SHOP_MENU=[{"id": "m01", "name": "นมเย็น", "cat": "เมน�
 /* ---------- state ---------- */
 const S={tab:'sell',cat:'ทั้งหมด',menu:lsGet('chabang.menu',[]),config:{...DEFAULT_CONFIG,...lsGet('chabang.config',{})},
   cart:lsGet('chabang.cart',{lines:[],discount:0,mode:'ทานที่ร้าน'}),today:[],todayKey:dayKey(),viewDay:dayKey(),range:'day',dayCache:{},dayFetched:{},loading:false,loadErr:false,
-  queue:lsGet('chabang.queue',[]),staff:lsGet('chabang.staff',''),push:[],pushId:lsGet('chabang.pushId',''),db:null,mode:'loading',menuLoaded:false,stale:false,downloads:null,modal:null,inflight:new Set()};
+  queue:lsGet('chabang.queue',[]),staff:lsGet('chabang.staff',''),stock:lsGet('chabang.stock',[]),push:[],pushId:lsGet('chabang.pushId',''),db:null,mode:'loading',menuLoaded:false,stale:false,downloads:null,modal:null,inflight:new Set()};
 const saveCart=()=>lsSet('chabang.cart',S.cart);
 const $=id=>document.getElementById(id);
 function toast(t){$('toast').innerHTML='<div class="toast" role="status">'+esc(t)+'</div>';clearTimeout(toast.t);toast.t=setTimeout(()=>{$('toast').innerHTML=''},2600)}
@@ -117,11 +117,12 @@ function start(){
     if(!S.modal)render();else renderChrome();
   },e=>{clearTimeout(timer);deny(e)}));
   unsubs.push(db.doc('config/shop').onSnapshot(s=>{if(!s.metadata||!s.metadata.fromCache)S.configLoaded=true;if(s.exists){S.config={...DEFAULT_CONFIG,...s.data()};migrateOwn();if(/with\s*you/i.test(S.config.name||'')){saveConfig({name:DEFAULT_CONFIG.name});toast('เปลี่ยนชื่อร้านเป็น '+DEFAULT_CONFIG.name+' แล้ว ตรวจเลขพร้อมเพย์ในแท็บตั้งค่าด้วย')}lsSet('chabang.config',S.config);renderChrome()}},deny));
+  unsubs.push(db.collection('stock').onSnapshot(s=>{if(!s.metadata.fromCache||s.size){S.stock=s.docs.map(d=>({...d.data()})).sort((a,b)=>(a.order??999)-(b.order??999));lsSet('chabang.stock',S.stock)}renderChrome();if(S.tab==='stock'&&!S.modal)render()},()=>{}));
   unsubs.push(db.collection('push').onSnapshot(s=>{S.push=s.docs.map(d=>({...d.data()}));if(!syncPush.done){syncPush.done=true;syncPush()}if(S.tab==='config'&&!S.modal)render()},()=>{}));
   listenToday();flush();render();
 }
 /* ---------- push notifications ---------- */
-const PUSH_KINDS=[['bill','ทุกบิล'],['void','ยกเลิกบิล'],['expense','จ่ายซื้อของ'],['close','ปิดยอด']];
+const PUSH_KINDS=[['bill','ทุกบิล'],['void','ยกเลิกบิล'],['expense','จ่ายซื้อของ'],['close','ปิดยอด'],['stock','สต๊อกใกล้หมด/หมด']];
 const pushMe=()=>S.pushId&&S.push.find(p=>p.id===S.pushId);
 function deviceName(){const u=navigator.userAgent;return /iPad|Macintosh.*Mobile/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?'Android':'คอมพิวเตอร์'}
 function sendPush(tokens,title,body,tag){
@@ -131,7 +132,7 @@ function sendPush(tokens,title,body,tag){
 }
 function notify(kind,title,body,tag){
   if(!S.config.pushUrl||!navigator.onLine)return;
-  const toks=S.push.filter(p=>p.id!==S.pushId&&p.prefs&&p.prefs[kind]&&p.token).map(p=>p.token);
+  const toks=S.push.filter(p=>p.id!==S.pushId&&p.prefs&&(p.prefs[kind]??kind==='stock')&&p.token).map(p=>p.token);
   if(toks.length)sendPush(toks,title,body,tag).catch(()=>{});
 }
 async function syncPush(){const me=pushMe();if(!me||!('Notification' in window)||Notification.permission!=='granted')return;
@@ -176,13 +177,15 @@ function renderChrome(){
   $('brand').textContent=S.config.name||'CHABANG';
   const sb=$('staffbtn');if(sb){sb.innerHTML='<span class="sl">พนักงาน</span> <b>'+esc(S.staff||'ยังไม่ระบุ')+'</b>';sb.setAttribute('aria-label','พนักงานกะนี้ '+(S.staff||'ยังไม่ระบุ')+' แตะเพื่อเปลี่ยน')}
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.v===S.tab));
+  const need=S.stock.filter(x=>x.status==='low'||x.status==='out').length,st=document.querySelector('.tab[data-v=stock]');
+  if(st)st.innerHTML='สต๊อก'+(need?`<span class="badge" aria-label="ต้องซื้อ ${need} รายการ">${need}</span>`:'');
   $('sync').innerHTML=S.queue.length?'<span class="pill wait">รอส่ง '+S.queue.length+' รายการ</span>':S.stale?'<span class="pill wait">ออฟไลน์</span>':'';
   let n='';
   if(S.denied)n='<div class="notice"><span>บัญชีนี้ยังอ่านหรือบันทึกข้อมูลไม่ได้ ตรวจกฎ Firestore ว่าใส่อีเมลบัญชีร้านถูกต้องและกด Publish แล้ว</span></div>';
   $('notice').innerHTML=n;$('notice').hidden=!n;
   document.querySelector('.app').style.gridTemplateRows=n?'auto auto 1fr':'auto 1fr';
 }
-function render(){renderChrome();({sell:renderSell,sales:renderSales,menu:renderMenu,config:renderConfig})[S.tab]();renderModal()}
+function render(){renderChrome();({sell:renderSell,sales:renderSales,menu:renderMenu,stock:renderStock,config:renderConfig})[S.tab]();renderModal()}
 function priceLabel(p){return Object.entries(p).map(([k,v])=>k==='ราคาเดียว'?'<span><b>'+v+'</b></span>':'<span>'+k+' <b>'+v+'</b></span>').join('')}
 function cats(){return ['ทั้งหมด',...new Set(S.menu.map(m=>m.cat||'อื่น ๆ'))]}
 function renderSell(){
@@ -316,11 +319,29 @@ function renderMenu(){
 }
 function pushSection(){
   const me=pushMe(),others=S.push.filter(p=>p.id!==S.pushId);
-  const mine=me?`<p>เครื่องนี้รับแจ้งเตือนอยู่ เลือกเรื่องที่ต้องการ</p><div class="chips">${PUSH_KINDS.map(([k,l])=>`<button type="button" class="chip ${me.prefs&&me.prefs[k]?'on':''}" data-act="push-pref" data-v="${k}">${l}</button>`).join('')}</div>
+  const mine=me?`<p>เครื่องนี้รับแจ้งเตือนอยู่ เลือกเรื่องที่ต้องการ</p><div class="chips">${PUSH_KINDS.map(([k,l])=>`<button type="button" class="chip ${me.prefs&&(me.prefs[k]??k==='stock')?'on':''}" data-act="push-pref" data-v="${k}">${l}</button>`).join('')}</div>
    <div class="pay"><button type="button" class="btn" data-act="push-test">ทดสอบแจ้งเตือน</button><button type="button" class="btn danger" data-act="push-off">ปิดบนเครื่องนี้</button></div>`
    :`<p class="muted">เปิดบนมือถือของเจ้าของร้าน แล้วจะมีแจ้งเตือนเด้งเมื่อเครื่องอื่นปิดบิล ยกเลิกบิล จ่ายซื้อของ หรือปิดยอด แม้ล็อกจออยู่ บน iPhone/iPad ต้องเปิดแอปจากไอคอนบนหน้าจอโฮม</p><button type="button" class="btn main" data-act="push-on" ${S.config.pushUrl?'':'disabled'}>เปิดการแจ้งเตือนบนเครื่องนี้</button>${S.config.pushUrl?'':'<p class="hint">ใส่ลิงก์ Apps Script ด้านบนแล้วกดบันทึกก่อน</p>'}`;
-  return `<section class="panel" style="margin-top:8px"><h3>แจ้งเตือนบนมือถือ</h3>${mine}${others.length?`<div class="muted" style="margin-top:10px">เครื่องอื่นที่รับแจ้งเตือน</div><div class="list">${others.map(p=>`<div class="li"><div class="g">${esc(p.device||'เครื่อง')}${p.name?' · '+esc(p.name):''}<small>${PUSH_KINDS.filter(([k])=>p.prefs&&p.prefs[k]).map(x=>x[1]).join(', ')||'ปิดทุกเรื่อง'}</small></div><button type="button" class="link danger" data-act="push-del" data-id="${esc(p.id)}">เลิกส่ง</button></div>`).join('')}</div>`:''}</section>`;
+  return `<section class="panel" style="margin-top:8px"><h3>แจ้งเตือนบนมือถือ</h3>${mine}${others.length?`<div class="muted" style="margin-top:10px">เครื่องอื่นที่รับแจ้งเตือน</div><div class="list">${others.map(p=>`<div class="li"><div class="g">${esc(p.device||'เครื่อง')}${p.name?' · '+esc(p.name):''}<small>${PUSH_KINDS.filter(([k])=>p.prefs&&(p.prefs[k]??k==='stock')).map(x=>x[1]).join(', ')||'ปิดทุกเรื่อง'}</small></div><button type="button" class="link danger" data-act="push-del" data-id="${esc(p.id)}">เลิกส่ง</button></div>`).join('')}</div>`:''}</section>`;
 }
+const ST={ok:'มีพอ',low:'ใกล้หมด',out:'หมด'};
+const STOCK_STARTER=['ผงชาไทย','ชาเขียว','ชาดำ','กาแฟโบราณ','โกโก้','ไมโล','นมข้นหวาน','นมข้นจืด','นมสด','น้ำตาล','ไซรัป/น้ำหวาน','มะนาว','น้ำแข็ง','แก้ว','ฝาแก้ว','ถุง/ถัง','หลอด'];
+function stockText(){const o=S.stock.filter(x=>x.status==='out'),l=S.stock.filter(x=>x.status==='low');
+  return `รายการต้องซื้อ ${S.config.name} ${thaiDay(dayKey())}\n`+(o.length?'หมดแล้ว\n'+o.map(x=>'- '+x.name).join('\n')+'\n':'')+(l.length?'ใกล้หมด\n'+l.map(x=>'- '+x.name).join('\n'):'')}
+function renderStock(){
+  const o=S.stock.filter(x=>x.status==='out'),l=S.stock.filter(x=>x.status==='low');
+  const ago=ts=>{if(!ts)return '';const m=Math.round((Date.now()-ts)/60000);return m<1?'เมื่อสักครู่':m<60?m+' นาทีที่แล้ว':m<1440?Math.round(m/60)+' ชม.ที่แล้ว':new Date(ts).toLocaleDateString('th-TH',{day:'numeric',month:'short'})};
+  const row=x=>`<div class="li stock st-${x.status||'ok'}"><button class="g" data-act="stock-edit" data-id="${esc(x.id)}" style="text-align:left"><b>${esc(x.name)}</b><small>${x.status&&x.status!=='ok'&&x.at?ST[x.status]+' · '+ago(x.at)+(x.by?' · '+esc(x.by):''):''}</small></button>
+   <div class="st3" role="group" aria-label="สถานะ ${esc(x.name)}">${Object.entries(ST).map(([k,v])=>`<button class="${k}${(x.status||'ok')===k?' on':''}" data-act="stock-set" data-id="${esc(x.id)}" data-v="${k}" aria-pressed="${(x.status||'ok')===k}">${v}</button>`).join('')}</div></div>`;
+  const scroll=document.querySelector('#view .scroll')?.scrollTop||0;
+  $('view').innerHTML=`<div class="scroll"><div class="narrow"><div class="daybar"><h2>สต๊อกวัตถุดิบ</h2>${o.length||l.length?'<button class="btn" data-act="stock-copy" style="margin-left:auto">คัดลอกรายการต้องซื้อ</button>':''}</div>
+  ${S.stock.length?`<div class="payrow">${o.length?`<span>หมด <b class="num">${o.length}</b> รายการ</span>`:''}${l.length?`<span>ใกล้หมด <b class="num">${l.length}</b> รายการ</span>`:''}${!o.length&&!l.length?'<span>ของมีพอทุกรายการ</span>':''}</div>
+  <div class="list">${S.stock.map(row).join('')}</div>`:`<div class="empty"><div>ยังไม่มีรายการวัตถุดิบ</div><button class="btn" data-act="stock-starter">เพิ่มรายการตั้งต้น ${STOCK_STARTER.length} รายการ</button></div>`}
+  <form id="stf" class="daybar" style="margin-top:12px"><label class="field" style="flex:1;margin:0"><span class="sr">ชื่อวัตถุดิบใหม่</span><input id="st-name" autocomplete="off" placeholder="เพิ่มวัตถุดิบ เช่น นมข้นหวาน"></label><button class="btn main" type="submit">เพิ่ม</button></form>
+  <p class="muted">ไม่ได้ตัดสต๊อกอัตโนมัติ พนักงานกด "ใกล้หมด" หรือ "หมด" เมื่อเห็นของเหลือน้อย ซื้อมาแล้วกด "มีพอ"</p></div></div>`;
+  const sc=document.querySelector('#view .scroll');if(sc)sc.scrollTop=scroll;
+}
+function saveStock(x){const i=S.stock.findIndex(y=>y.id===x.id);if(i>=0)S.stock[i]=x;else S.stock.push(x);lsSet('chabang.stock',S.stock);if(S.db)S.db.collection('stock').doc(x.id).set(x).catch(()=>toast('บันทึกสต๊อกไม่สำเร็จ ตรวจอินเทอร์เน็ต'))}
 function renderConfig(){
   const c=S.config;
   $('view').innerHTML=`<div class="scroll"><form class="narrow" id="cfg" style="max-width:560px">
@@ -367,6 +388,9 @@ const MODALS={
   <div class="pay" style="grid-column:1/-1"><button class="btn" type="button" data-act="close">${S.staff?'ยกเลิก':'ข้ามไปก่อน'}</button><button class="btn main" type="submit">เริ่มกะ</button></div></form>`},
  float(m){return `<h2>เงินทอนตั้งต้น</h2><p class="muted">เงินที่ใส่ไว้ในลิ้นชักตอนเปิดร้านวันนี้</p><div class="big num center">${baht(+m.buf||0)}</div><div class="chips">${[500,1000,1500,2000].map(x=>`<button class="chip num" data-act="set-buf" data-v="${x}">${x.toLocaleString('en-US')}</button>`).join('')}</div>${keypad()}<div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="float-ok">บันทึก</button></div>`},
  closeDay(m){const r=summary([S.todayKey]),got=+m.buf||0,d=got-r.drawer;return `<h2>ปิดยอด นับเงินในลิ้นชัก</h2><div class="row"><span>ควรมีในลิ้นชัก</span><span class="total num">${sbaht(r.drawer)}</span></div><div class="row"><span>นับได้จริง</span><span class="total num">${baht(got)}</span></div>${keypad()}<div class="row"><span>ผลต่าง</span><span class="total num" style="color:${!m.buf||d===0?'var(--leaf)':'var(--cherry)'}">${!m.buf?'—':d===0?'ตรงพอดี':d<0?'ขาด '+baht(-d):'เกิน '+baht(d)}</span></div>${r.open?'':'<p class="hint warn">ยังไม่ได้ใส่เงินทอนตั้งต้นของวันนี้ ยอดที่ควรมีจึงยังไม่รวมเงินทอน</p>'}<div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="close-ok" ${m.buf?'':'disabled'}>บันทึกการปิดยอด</button></div>`},
+ stockEdit(m){const x=m.item;return `<h2>แก้ไขวัตถุดิบ</h2><form id="sef" class="fields" style="display:grid"><label class="field" style="grid-column:1/-1"><span>ชื่อ</span><input id="se-name" required value="${esc(x.name)}"></label>
+  <div class="pay" style="grid-column:1/-1"><button class="btn" type="button" data-act="close">ยกเลิก</button><button class="btn main" type="submit">บันทึก</button></div>
+  <button class="link danger" type="button" style="grid-column:1/-1" data-act="${m.confirmDel?'stock-del-ok':'stock-del'}">${m.confirmDel?'แตะอีกครั้งเพื่อลบ':'ลบรายการนี้'}</button></form>`},
  clear(){return `<h2>ล้างบิลปัจจุบัน?</h2><div class="pay"><button class="btn" data-act="close">เก็บไว้</button><button class="btn danger" data-act="clear-ok">ล้างบิล</button></div>`},
  editMenu(m){const it=m.item;return `<h2>${it.id?'แก้ไขเมนู':'เพิ่มเมนู'}</h2><form id="mf" class="fields" style="display:grid">
   <label class="field" style="grid-column:1/-1"><span>ชื่อเมนู</span><input id="f-name" required value="${esc(it.name||'')}"></label>
@@ -442,6 +466,13 @@ const ACT={
  void(d){openModal({type:'void',sale:salesOf(S.viewDay).find(s=>s.id===d.id)})},
  expense(){openModal({type:'expense'})},
  staff(){openModal({type:'staff'})},
+ 'stock-set'(d){const x=S.stock.find(y=>y.id===d.id);if(!x||(x.status||'ok')===d.v)return;saveStock({...x,status:d.v,at:Date.now(),by:S.staff||''});render();refocus(d);
+  if(d.v!=='ok')notify('stock',(d.v==='out'?'🔴 ':'🟡 ')+x.name+' '+ST[d.v],'แจ้งโดย '+(S.staff||'ไม่ระบุ'),'s'+x.id);toast(x.name+' · '+ST[d.v])},
+ 'stock-starter'(){STOCK_STARTER.forEach((n,i)=>saveStock({id:'s'+Date.now()+i,name:n,status:'ok',order:i}));render()},
+ 'stock-edit'(d){const x=S.stock.find(y=>y.id===d.id);if(x)openModal({type:'stockEdit',item:{...x}})},
+ 'stock-del'(){S.modal.confirmDel=true;renderModal()},
+ 'stock-del-ok'(){const id=S.modal.item.id;S.stock=S.stock.filter(y=>y.id!==id);lsSet('chabang.stock',S.stock);if(S.db)S.db.collection('stock').doc(id).delete().catch(()=>{});closeModal();toast('ลบรายการแล้ว')},
+ 'stock-copy'(){const t=stockText();navigator.clipboard.writeText(t).then(()=>toast('คัดลอกแล้ว วางใน LINE ได้เลย')).catch(()=>openModal({type:'copy',text:t}))},
  reorder(){S.reorder=!S.reorder;render();if(!S.reorder)toast('บันทึกลำดับเมนูแล้ว')},
  'item-move'(d){const g=menuGroups();for(const [,items] of g){const i=items.findIndex(m=>m.id===d.v),j=i+(+d.d);if(i>=0){if(j<0||j>=items.length)return;[items[i],items[j]]=[items[j],items[i]];break}}
   const sc=document.querySelector('#view .scroll')?.scrollTop||0;applyOrder(g);render();const s=document.querySelector('#view .scroll');if(s)s.scrollTop=sc;refocus(d)},
@@ -450,7 +481,7 @@ const ACT={
  'push-on'(){pushOn()},
  'push-off'(){const me=pushMe();if(me)S.db.collection('push').doc(me.id).delete().then(()=>toast('ปิดการแจ้งเตือนบนเครื่องนี้แล้ว')).catch(()=>toast('ปิดไม่สำเร็จ ตรวจอินเทอร์เน็ต'))},
  'push-del'(d){S.db.collection('push').doc(d.id).delete().then(()=>toast('เลิกส่งแจ้งเตือนไปเครื่องนั้นแล้ว')).catch(()=>{})},
- 'push-pref'(d){const me=pushMe();if(!me)return;const prefs={...me.prefs,[d.v]:!(me.prefs&&me.prefs[d.v])};me.prefs=prefs;render();S.db.collection('push').doc(me.id).set({...me,prefs}).catch(()=>toast('บันทึกไม่สำเร็จ'))},
+ 'push-pref'(d){const me=pushMe();if(!me)return;const prefs={...me.prefs,[d.v]:!(me.prefs&&(me.prefs[d.v]??d.v==='stock'))};me.prefs=prefs;render();S.db.collection('push').doc(me.id).set({...me,prefs}).catch(()=>toast('บันทึกไม่สำเร็จ'))},
  'push-test'(){const me=pushMe();if(!me)return;toast('กำลังส่งแจ้งเตือนทดสอบ');
   sendPush([me.token],'🔔 ทดสอบแจ้งเตือน','CHABANG POS ส่งแจ้งเตือนมาที่เครื่องนี้ได้แล้ว','test').then(j=>toast(j&&j.ok&&j.results&&j.results[0]===200?'ส่งแล้ว ถ้าไม่เด้ง ตรวจว่าเครื่องเปิดเสียงแจ้งเตือนอยู่':'ส่งไม่สำเร็จ: '+(j&&j.error==='auth'?'อีเมลบัญชีร้านในสคริปต์ไม่ตรง':j&&j.error||('รหัส '+(j&&j.results||[]).join(',')))))
    .catch(()=>toast('ติดต่อ Apps Script ไม่ได้ ตรวจลิงก์และการตั้งค่า "ผู้ที่มีสิทธิ์เข้าถึง: ทุกคน"'))},
@@ -492,6 +523,8 @@ document.addEventListener('submit',e=>{
   if(e.target.id==='cfg'){const pu=$('c-push').value.trim();if(pu&&!/^https:\/\/script\.google\.com\//.test(pu)){toast('ลิงก์แจ้งเตือนต้องขึ้นต้นด้วย https://script.google.com/');return}
     saveConfig({name:$('c-name').value.trim()||'ร้านกาแฟ',promptpay:$('c-pp').value.trim(),addons:$('c-add').value,pushUrl:pu});render();
     const pp=$('c-pp').value.trim();toast(pp&&!promptpayPayload(pp,1)?'เลขพร้อมเพย์ต้องมี 10, 13 หรือ 15 หลัก':'บันทึกการตั้งค่าแล้ว')}
+  if(e.target.id==='stf'){const n=$('st-name').value.trim();if(!n)return;saveStock({id:'s'+Date.now(),name:n,status:'ok',order:S.stock.length});render();$('st-name')&&$('st-name').focus();toast('เพิ่ม '+n+' แล้ว')}
+  if(e.target.id==='sef'){const n=$('se-name').value.trim();if(!n)return;saveStock({...S.stock.find(y=>y.id===S.modal.item.id),name:n});closeModal()}
   if(e.target.id==='sf'){const n=$('s-name').value.trim();if(!n){toast('พิมพ์ชื่อหรือแตะเลือกชื่อ');return}setStaff(n);closeModal();toast('เริ่มกะของ '+n)}
   if(e.target.id==='ef'){const item=$('e-item').value.trim(),amount=Math.round(+$('e-amt').value||0);
     if(!item||amount<=0){toast('ใส่ชื่อของและจำนวนเงิน');return}

@@ -88,3 +88,8 @@ service cloud.firestore {
 - เมื่อมีบิล ยกเลิก จ่ายซื้อของ หรือปิดยอด เครื่องที่ทำรายการส่ง `{idToken, tokens, title, body, tag}` ไปที่ลิงก์ Apps Script (`config/shop.pushUrl`)
 - `notify-relay.gs` ตรวจ idToken ว่าเป็นบัญชีร้าน แล้วส่งผ่าน FCM HTTP v1 ด้วย service account ของเจ้าของ ส่วน `src/sw.js` รับ push แล้วแสดงแจ้งเตือน
 - ไฟล์กุญแจ service account อยู่ใน Apps Script ของเจ้าของเท่านั้น ห้ามใส่ใน repo
+
+## สต๊อกวัตถุดิบ (เพิ่มในร้านชาบัง)
+
+- `stock/{id}` = `{id, name, status:'ok'|'low'|'out', order, at, by}` ไม่ตัดสต๊อกอัตโนมัติ พนักงานกดสถานะเอง
+- เมื่อกด "ใกล้หมด" หรือ "หมด" จะส่งแจ้งเตือนประเภท `stock` (เครื่องที่เปิดแจ้งเตือนไว้ก่อนมีประเภทนี้จะได้รับโดยปริยาย)
