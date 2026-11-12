@@ -4,22 +4,22 @@
 <title>CHABANG POS</title>
 <script>try{var m=localStorage.getItem("chabang.theme");if(m==="light"||m==="dark")document.documentElement.setAttribute("data-theme",m)}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="CHABANG">
-<meta name="theme-color" content="#4D2420"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#F4F4F7"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Kanit:wght@500;600&display=swap">
 <style>
 /* Layout: counter screen. Menu tiles fill the left, the running bill stays fixed on the right like a ticket on the rail. */
 :root{
-  --pb-ink:#5A2A22; --ground:#EEF1F4; --surface:#F7F9FB; --raised:#FFFFFF; --ink:#2A2B30; --muted:#5B6470; --line:#CDD4DC;
-  --leaf:#5A2A22; --leaf-ink:#FFFFFF; --leaf-soft:#F4E7E0; --sky:#6B4A3A; --sky-ink:#FFFFFF; --sun:#DF802C; --leaf-hover:#70372C; --leaf-press:#401C17; --leaf-ring:#E5CBBF; --sky-ring:#E2D3C9; --focus:#6B4A3A; --pb-hover-bg:#E5CBBF; --pb-hover-ink:#401C17; --cherry-press:#9E2E21; --off:#D6D1CB; --off-ink:#FFFFFF; --lift:0 3px 6px rgba(42,43,48,.16),0 1px 2px rgba(42,43,48,.10); --lift-sm:0 2px 4px rgba(42,43,48,.12); --cherry:#C23A2B; --cherry-soft:#F8E0DC; --amber:#8A5A00; --amber-soft:#F6E9C8;
+  --pb-ink:#1F1F23; --ground:#F4F4F7; --surface:#FFFFFF; --raised:#FFFFFF; --ink:#1F1F23; --muted:#5F5F69; --line:#DCDCE3;
+  --leaf:#222226; --leaf-ink:#FFFFFF; --leaf-soft:#F6EFE6; --sky:#222226; --sky-ink:#FFFFFF; --sun:#DF802C; --leaf-hover:#3A3A40; --leaf-press:#000000; --leaf-ring:#E6D9C8; --sky-ring:#D5D5DC; --focus:#222226; --pb-hover-bg:#E6D9C8; --pb-hover-ink:#000000; --cherry-press:#9E2E21; --off:#D8D8DE; --off-ink:#FFFFFF; --lift:0 4px 12px rgba(31,31,45,.09),0 1px 2px rgba(31,31,45,.06); --lift-sm:0 2px 6px rgba(31,31,45,.07); --card:0 6px 22px rgba(31,31,45,.06),0 1px 3px rgba(31,31,45,.05); --card-line:transparent; --cherry:#C23A2B; --cherry-soft:#F8E0DC; --amber:#8A5A00; --amber-soft:#F6E9C8;
   --display:"Prompt",system-ui,sans-serif;--num:"Kanit","Prompt",system-ui,sans-serif; --body:"Prompt",system-ui,-apple-system,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --ground:#1C1611; --surface:#241C16; --raised:#2E241C; --ink:#F1EAE2; --muted:#B5A698; --line:#45382D; --pb-ink:#FFFFFF;
-  --leaf:#E8964A; --leaf-ink:#1D140E; --leaf-soft:#40291A; --sky:#D9B79A; --sky-ink:#1C1611; --sun:#E8964A; --leaf-hover:#F0AE70; --leaf-press:#C97A33; --leaf-ring:#5E4029; --sky-ring:#4E3E33; --focus:#D9B79A; --pb-hover-bg:#4C3524; --pb-hover-ink:#F4C89C; --cherry-press:#D9695B; --off:#45382D; --off-ink:#8C7D70; --lift:0 3px 8px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35); --lift-sm:0 2px 4px rgba(0,0,0,.35); --cherry:#F08A7C; --cherry-soft:#4A2622; --amber:#E9BE62; --amber-soft:#3E3018; color-scheme:dark}}
+  --ground:#17171A; --surface:#202024; --raised:#2A2A30; --ink:#F2F2F5; --muted:#ABABB5; --line:#3A3A42; --pb-ink:#FFFFFF;
+  --leaf:#F2F2F5; --leaf-ink:#17171A; --leaf-soft:#38322B; --sky:#F2F2F5; --sky-ink:#17171A; --sun:#E8964A; --leaf-hover:#FFFFFF; --leaf-press:#CFCFD6; --leaf-ring:#554B3F; --sky-ring:#4A4A54; --focus:#F2F2F5; --pb-hover-bg:#4A4136; --pb-hover-ink:#FFFFFF; --cherry-press:#D9695B; --off:#3A3A42; --off-ink:#81818C; --lift:0 3px 8px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35); --lift-sm:0 2px 4px rgba(0,0,0,.35); --card:0 4px 14px rgba(0,0,0,.35); --card-line:#2E2E35; --cherry:#F08A7C; --cherry-soft:#45262A; --amber:#E9BE62; --amber-soft:#3B3019; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --ground:#1C1611; --surface:#241C16; --raised:#2E241C; --ink:#F1EAE2; --muted:#B5A698; --line:#45382D; --pb-ink:#FFFFFF;
-  --leaf:#E8964A; --leaf-ink:#1D140E; --leaf-soft:#40291A; --sky:#D9B79A; --sky-ink:#1C1611; --sun:#E8964A; --leaf-hover:#F0AE70; --leaf-press:#C97A33; --leaf-ring:#5E4029; --sky-ring:#4E3E33; --focus:#D9B79A; --pb-hover-bg:#4C3524; --pb-hover-ink:#F4C89C; --cherry-press:#D9695B; --off:#45382D; --off-ink:#8C7D70; --lift:0 3px 8px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35); --lift-sm:0 2px 4px rgba(0,0,0,.35); --cherry:#F08A7C; --cherry-soft:#4A2622; --amber:#E9BE62; --amber-soft:#3E3018; color-scheme:dark}
+  --ground:#17171A; --surface:#202024; --raised:#2A2A30; --ink:#F2F2F5; --muted:#ABABB5; --line:#3A3A42; --pb-ink:#FFFFFF;
+  --leaf:#F2F2F5; --leaf-ink:#17171A; --leaf-soft:#38322B; --sky:#F2F2F5; --sky-ink:#17171A; --sun:#E8964A; --leaf-hover:#FFFFFF; --leaf-press:#CFCFD6; --leaf-ring:#554B3F; --sky-ring:#4A4A54; --focus:#F2F2F5; --pb-hover-bg:#4A4136; --pb-hover-ink:#FFFFFF; --cherry-press:#D9695B; --off:#3A3A42; --off-ink:#81818C; --lift:0 3px 8px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35); --lift-sm:0 2px 4px rgba(0,0,0,.35); --card:0 4px 14px rgba(0,0,0,.35); --card-line:#2E2E35; --cherry:#F08A7C; --cherry-soft:#45262A; --amber:#E9BE62; --amber-soft:#3B3019; color-scheme:dark}
 html{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html,body{height:100%;margin:0}
 [hidden]{display:none!important}
@@ -137,6 +137,10 @@ button{cursor:pointer;touch-action:manipulation;background:none;border:0;padding
 .stname .stn{display:grid;flex:1;min-width:0}.stedit{display:inline-flex;align-items:center;gap:4px;flex:none;color:var(--leaf);font-size:13px;font-weight:600}
 @media (hover:hover){.stname:hover{border-color:var(--leaf-ring);background:var(--leaf-soft)}}
 .stname:active{background:var(--leaf-soft);transform:translateY(1px)}
+/* Clean card look: white cards on a pale ground, soft shadow instead of outlines, rounder corners */
+.tile,.bill,.kpis,.list,.tw,.tabs,.gate form{border-color:var(--card-line);box-shadow:var(--card)}
+.tile,.bill,.kpis,.list,.tw,.gate form{border-radius:16px}.sheet{border-radius:18px}.tabs{border-radius:14px}.tab{border-radius:11px}
+.tile .tn{border-color:var(--line);box-shadow:none;border-radius:12px}.pb{border-radius:12px}.btn,.sbtn,.iconbtn{border-radius:12px}.cat{border-radius:14px}
 .minibar{display:none}
 @media (max-width:720px){
   html,body{height:auto}

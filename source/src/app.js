@@ -170,7 +170,7 @@ const THEMES={auto:{label:'อัตโนมัติ',next:'light',icon:'<svg 
  dark:{label:'มืด',next:'auto',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>'}};
 function themeMode(){const v=document.documentElement.getAttribute('data-theme');return v==='light'||v==='dark'?v:'auto'}
 function applyTheme(m){if(m==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',m);try{localStorage.setItem('chabang.theme',m)}catch(e){}
-  const dark=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const meta=document.querySelector('meta[name=theme-color]');if(meta)meta.content=dark?'#1C1611':'#4D2420';renderTheme()}
+  const dark=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const meta=document.querySelector('meta[name=theme-color]');if(meta)meta.content=dark?'#17171A':'#F4F4F7';renderTheme()}
 function renderTheme(){const b=$('themebtn');if(!b)return;const m=themeMode(),t=THEMES[m];b.innerHTML=t.icon+'<span class="tl">'+t.label+'</span>';b.setAttribute('aria-label','ธีม '+t.label+' แตะเพื่อเปลี่ยนเป็น'+THEMES[t.next].label)}
 function renderChrome(){
   renderTheme();
