@@ -269,7 +269,7 @@ function renderSales(){
   $('view').innerHTML=`<div class="scroll"><div class="narrow">
   <div class="daybar"><div class="seg">${[['day','วัน'],['week','สัปดาห์'],['month','เดือน']].map(([k,t])=>`<button class="${R===k?'on':''}" data-act="range" data-v="${k}">${t}</button>`).join('')}</div>
   <button class="iconbtn" data-act="day" data-d="-1" aria-label="ช่วงก่อนหน้า">‹</button><button class="iconbtn" data-act="day" data-d="1" aria-label="ช่วงถัดไป" ${nextDisabled?'disabled':''}>›</button><h2>${rangeLabel(R,d)}</h2>
-  <button class="btn" data-act="copy-summary">คัดลอกสรุป</button><button class="btn" data-act="csv">ส่งออก CSV</button></div>
+  <span class="acts"><button class="btn" data-act="copy-summary">คัดลอกสรุป</button><button class="btn" data-act="csv">ส่งออก CSV</button></span></div>
   ${S.loadErr?'<div class="notice">โหลดยอดบางวันไม่สำเร็จ ตัวเลขอาจไม่ครบ ตรวจอินเทอร์เน็ตแล้วเปิดแท็บนี้ใหม่</div>':S.loading?'<div class="muted">กำลังโหลดยอดขาย</div>':''}
   <div class="kpis"><div class="hero"><label>จำนวนแก้วรวม</label><strong class="num">${r.cups.toLocaleString('en-US')} แก้ว</strong><small>${typeLine}</small></div>
   <div><label>ยอดขาย</label><strong class="num">${baht(r.total)}</strong><small>${r.cups?'เฉลี่ย '+baht(Math.round(r.drinkAmt/r.cups))+' ต่อแก้ว':'—'}</small></div>
