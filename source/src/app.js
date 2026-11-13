@@ -122,6 +122,8 @@ function start(){
   listenToday();flush();render();
 }
 /* ---------- push notifications ---------- */
+const thb=n=>Number(n||0).toLocaleString('en-US')+' บาท';
+const lineTxt=l=>l.name+(l.type?' '+l.type:'')+(l.qty>1?' ×'+l.qty:'');
 const PUSH_KINDS=[['bill','ทุกบิล'],['void','ยกเลิกบิล'],['expense','จ่ายซื้อของ'],['close','ปิดยอด'],['stock','สต๊อกใกล้หมด/หมด']];
 const pushMe=()=>S.pushId&&S.push.find(p=>p.id===S.pushId);
 function deviceName(){const u=navigator.userAgent;return /iPad|Macintosh.*Mobile/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'iPad':/iPhone/.test(u)?'iPhone':/Android/.test(u)?'Android':'คอมพิวเตอร์'}
@@ -433,7 +435,7 @@ function finish(pay,extra){
   const t=billTotals(S.cart.lines,S.cart.discount),day=dayKey();
   const no=salesOf(day).reduce((a,s)=>Math.max(a,s.no||0),0)+1;
   const sale={id:'b'+Date.now()+Math.random().toString(36).slice(2,6),day,no,ts:Date.now(),lines:S.cart.lines,mode:S.cart.mode,sub:t.sub,discount:t.disc,total:t.total,pay,staff:S.staff||'',...extra};
-  writeSale(sale);notify('bill','🧾 บิล #'+no+' '+baht(t.total),[pay,sale.staff,sale.lines.map(l=>l.name+(l.qty>1?' ×'+l.qty:'')).join(', ')].filter(Boolean).join(' · '),sale.id);
+  writeSale(sale);notify('bill','🧾 ขายได้ '+thb(t.total)+' · บิล #'+no,[sale.lines.map(lineTxt).join(', '),pay,sale.staff].filter(Boolean).join(' · '),sale.id);
   S.cart={lines:[],discount:0,mode:S.cart.mode};saveCart();S.modal={type:'done',sale};render();
 }
 function addLine(it,type,sweet,addonNames,qty=1){
@@ -504,7 +506,7 @@ const ACT={
  'to-bill'(){const b=document.querySelector('.bill');if(!b)return;const smooth=!matchMedia('(prefers-reduced-motion: reduce)').matches;b.scrollIntoView({behavior:smooth?'smooth':'auto',block:'end'});const h=b.querySelector('.bill-h h2');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}},
  'e-name'(d){$('e-item').value=d.v;$('e-amt').focus()},
  'void-ok'(){const vs=S.modal.sale;S.lastVoidExp=vs.kind==='expense';
-  notify('void',vs.kind==='expense'?'❌ ยกเลิกรายการจ่าย '+baht(vs.amount):'❌ ยกเลิกบิล #'+vs.no+' '+baht(vs.total),[vs.kind==='expense'?vs.item:vs.lines.map(l=>l.name).join(', '),S.staff&&'โดย '+S.staff].filter(Boolean).join(' · '),'v'+vs.id);
+  notify('void',vs.kind==='expense'?'❌ ยกเลิกรายการจ่าย '+thb(vs.amount):'❌ ยกเลิกบิล '+thb(vs.total)+' · บิล #'+vs.no,[vs.kind==='expense'?vs.item:vs.lines.map(lineTxt).join(', '),S.staff&&'โดย '+S.staff].filter(Boolean).join(' · '),'v'+vs.id);
   writeSale({...S.modal.sale,voided:true,voidedAt:Date.now()});closeModal();toast(S.lastVoidExp?'ยกเลิกรายการจ่ายแล้ว':'ยกเลิกบิลแล้ว')},
  'edit-menu'(d){const it=d.id?S.menu.find(m=>m.id===d.id):{};openModal({type:'editMenu',item:{...it}})},
  'del-ask'(){S.modal.confirmDel=true;renderModal()},'del-ok'(){deleteMenuItem(S.modal.item.id);closeModal();toast('ลบเมนูแล้ว')},
@@ -543,7 +545,7 @@ document.addEventListener('submit',e=>{
   if(e.target.id==='ef'){const item=$('e-item').value.trim(),amount=Math.round(+$('e-amt').value||0);
     if(!item||amount<=0){toast('ใส่ชื่อของและจำนวนเงิน');return}
     const day=dayKey();writeSale({id:'e'+Date.now()+Math.random().toString(36).slice(2,6),kind:'expense',day,ts:Date.now(),item,amount,note:$('e-note').value.trim(),staff:S.staff||'',pay:'เงินสด',total:0});
-    notify('expense','💸 จ่ายซื้อของ '+baht(amount),[item,$('e-note')&&$('e-note').value.trim(),S.staff].filter(Boolean).join(' · '));
+    notify('expense','💸 จ่ายซื้อของ '+thb(amount),[item,$('e-note')&&$('e-note').value.trim(),S.staff].filter(Boolean).join(' · '));
     closeModal();if(S.tab==='sales')loadRange();toast('บันทึกจ่าย '+item+' '+baht(amount)+' แล้ว')}
   if(e.target.id==='mf'){const it=S.modal.item,prices={};TYPES.forEach((t,i)=>{const v=$('f-p'+i).value;if(v!=='')prices[t]=+v});
     if(!Object.keys(prices).length){toast('ใส่ราคาอย่างน้อย 1 ช่อง');return}
