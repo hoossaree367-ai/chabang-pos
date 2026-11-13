@@ -12,6 +12,7 @@
   "dependencies": {
     "esbuild": "^0.28.2",
     "firebase": "^13.2.0",
-    "qrcode-generator": "^1.4.4"
+    "qrcode-generator": "^1.4.4",
+    "jsqr": "^1.4.0"
   }
 }

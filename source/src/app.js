@@ -13,6 +13,15 @@ function promptpayPayload(target,amount){
   const body=tlv('00','01')+tlv('01',amount>0?'12':'11')+tlv('29',tlv('00','A000000677010111')+acc)+tlv('53','764')+(amount>0?tlv('54',Number(amount).toFixed(2)):'')+tlv('58','TH')+'6304';
   return body+crc16(body);
 }
+// QR ร้าน (เช่น QR แม่มณีหรือ QR ร้านค้าของธนาคาร): ใช้ข้อมูลเดิมทั้งหมด แค่ใส่ยอดเงินแล้วคำนวณ CRC ใหม่
+function parseTlv(s){const o=[];let i=0;while(i+4<=s.length){const t=s.slice(i,i+2),n=+s.slice(i+2,i+4);if(isNaN(n)||i+4+n>s.length)return null;o.push([t,s.slice(i+4,i+4+n)]);i+=4+n}return i===s.length?o:null}
+function shopQrOk(s){s=String(s||'').trim();if(!/^000201/.test(s)||s.slice(-8,-4)!=='6304'||crc16(s.slice(0,-4))!==s.slice(-4).toUpperCase())return false;const o=parseTlv(s);return !!o&&o.some(([t])=>t==='29'||t==='30')}
+function shopQrPayload(raw,amount){
+  const o=parseTlv(String(raw).trim());if(!o)return null;
+  let body='';for(const [t,v] of o){if(t==='54'||t==='63')continue;if(t==='01'){body+=tlv('01',amount>0?'12':'11');continue}if(t==='58'&&amount>0)body+=tlv('54',Number(amount).toFixed(2));body+=t+String(v.length).padStart(2,'0')+v}
+  body+='6304';return body+crc16(body);
+}
+function payPayload(amount){return S.config.shopQr&&shopQrOk(S.config.shopQr)?shopQrPayload(S.config.shopQr,amount):promptpayPayload(S.config.promptpay,amount)}
 function cashChoices(t){const s=new Set();[20,50,100,500,1000].forEach(n=>{const v=Math.ceil(t/n)*n;if(v>t)s.add(v)});[100,500,1000].forEach(v=>{if(v>t)s.add(v)});return [...s].sort((a,b)=>a-b).slice(0,4)}
 function lineTotal(l){return (l.price+(l.addons||[]).reduce((a,x)=>a+x.price,0))*l.qty}
 function billTotals(lines,discount){const sub=lines.reduce((a,l)=>a+lineTotal(l),0);const disc=Math.min(Math.max(0,discount||0),sub);return {sub,disc,total:sub-disc}}
@@ -154,6 +163,19 @@ async function pushOn(){
 }
 function migrateOwn(){if(!S.menuServer||!S.configLoaded||S.config.ownCup||!S.menu.length)return;
   S.menu.filter(m=>m.prices&&m.prices['ปั่น']!=null&&m.prices[OWN]==null).forEach(m=>saveMenuItem({...m,prices:{...m.prices,[OWN]:OWN_PRICE}}));saveConfig({ownCup:true})}
+async function readQrImage(file){
+  const {default:jsQR}=await import('jsqr');
+  const img=await new Promise((ok,no)=>{const u=URL.createObjectURL(file),i=new Image();i.onload=()=>{URL.revokeObjectURL(u);ok(i)};i.onerror=no;i.src=u});
+  for(const max of [900,1400,600]){const k=Math.min(1,max/Math.max(img.width,img.height)),w=Math.round(img.width*k),h=Math.round(img.height*k),cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(img,0,0,w,h);const r=jsQR(cx.getImageData(0,0,w,h).data,w,h,{inversionAttempts:'attemptBoth'});if(r&&r.data)return r.data}
+  return null;
+}
+document.addEventListener('change',async e=>{if(e.target.id!=='c-qrimg'||!e.target.files[0])return;toast('กำลังอ่าน QR…');
+  try{const s=await readQrImage(e.target.files[0]);
+    if(!s){toast('อ่าน QR ในรูปไม่ได้ ลองรูปที่ชัดกว่านี้ หรือครอปให้เห็นแค่ QR');return}
+    if(!shopQrOk(s)){toast('QR นี้ไม่ใช่ QR รับเงินแบบ Thai QR Payment');return}
+    saveConfig({shopQr:s.trim()});render();toast('ใช้ QR ของร้านแล้ว ลองกดพร้อมเพย์ในหน้าขายแล้วสแกนดู')}
+  catch(x){toast('อ่านรูปไม่สำเร็จ')}});
 function stop(){unsubs.forEach(u=>u());unsubs=[];if(listenToday.u){listenToday.u();listenToday.u=null}S.db=null}
 function setInvalid(on){['l-email','l-pw'].forEach(id=>{const e=$(id);if(on){e.setAttribute('aria-invalid','true');e.setAttribute('aria-describedby','loginerr')}else{e.removeAttribute('aria-invalid');e.removeAttribute('aria-describedby')}})}
 function boot(){
@@ -353,6 +375,11 @@ function renderConfig(){
   const c=S.config;
   $('view').innerHTML=`<div class="scroll"><form class="narrow" id="cfg" style="max-width:560px">
   <label class="field"><span>ชื่อร้าน</span><input id="c-name" value="${esc(c.name)}"></label>
+  <div class="field"><span>QR รับเงินของร้าน (ใช้แทนเลขพร้อมเพย์)</span>
+   ${c.shopQr?`<div class="notice" style="background:var(--leaf-soft);color:var(--ink)">ใช้ QR ของร้านอยู่ ระบบใส่ยอดเงินให้อัตโนมัติทุกบิล<button type="button" class="link danger" data-act="qr-clear" style="margin-left:auto">เลิกใช้</button></div>`:''}
+   <label class="btn" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer">${c.shopQr?'เปลี่ยนรูป QR':'เลือกรูป QR รับเงิน'}<input id="c-qrimg" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0"></label>
+   <input id="c-qr" type="hidden" value="${esc(c.shopQr||'')}"></div>
+  <label class="field"><span>ชื่อที่แสดงใต้ QR (ถ้ามี)</span><input id="c-qrlabel" autocomplete="off" value="${esc(c.qrLabel||'')}" placeholder="เช่น ชาบังสาขาควนสตอ"></label>
   <label class="field"><span>เบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตร 13 หลัก หรือ e-Wallet 15 หลัก</span><input id="c-pp" inputmode="numeric" value="${esc(c.promptpay)}" placeholder="08xxxxxxxx"></label>
   <label class="field"><span>ตัวเลือกเพิ่ม บรรทัดละ 1 รายการ เขียนแบบ ชื่อ,ราคา</span><textarea id="c-add" rows="4">${esc(c.addons)}</textarea></label>
   <label class="field"><span>ลิงก์ Apps Script สำหรับส่งแจ้งเตือน (ขึ้นต้นด้วย https://script.google.com/)</span><input id="c-push" inputmode="url" autocomplete="off" value="${esc(c.pushUrl||'')}" placeholder="https://script.google.com/macros/s/…/exec"></label>
@@ -379,8 +406,8 @@ const MODALS={
  discount(m){return `<h2>ส่วนลด</h2><div class="big num center">${baht(+m.buf||0)}</div>${keypad()}<div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="disc-ok">ใช้ส่วนลด</button></div>`},
  cash(m){const t=billTotals(S.cart.lines,S.cart.discount).total,got=+m.buf||0,ch=got-t;return `<h2>รับเงินสด</h2><div class="row"><span>ยอดชำระ</span><span class="total num">${baht(t)}</span></div><div class="row"><span>รับมา</span><span class="total num">${baht(got)}</span></div><div class="chips"><button class="chip num" data-act="set-buf" data-v="${t}">พอดี</button>${cashChoices(t).map(x=>`<button class="chip num" data-act="set-buf" data-v="${x}">${x.toLocaleString('en-US')}</button>`).join('')}</div>${keypad()}<div class="row"><span>เงินทอน</span><span class="total num" style="color:var(--leaf)">${got?(ch>=0?baht(ch):'—'):baht(0)}</span></div>${got&&ch<0?`<p class="hint warn">รับมายังไม่พอ ขาดอีก ${baht(-ch)}</p>`:got?'':'<p class="hint">ไม่ใส่ยอดรับ ระบบจะถือว่ารับมาพอดี</p>'}<div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="pay-cash" ${got&&ch<0?'disabled':''}>ปิดการขาย</button></div>`},
  qr(m){const t=billTotals(S.cart.lines,S.cart.discount).total;
-  if(!m.payload)return `<h2>ยังไม่ได้ใส่เลขพร้อมเพย์</h2><p>ใส่เบอร์หรือเลขพร้อมเพย์ของร้านที่แท็บตั้งค่าก่อน ระบบจึงจะสร้าง QR รับเงินได้</p><div class="pay"><button class="btn" data-act="close">ปิด</button><button class="btn main" data-act="go-config">ไปที่ตั้งค่า</button></div>`;
-  return `<h2 class="center">สแกนจ่ายพร้อมเพย์</h2><div class="qr" id="qrbox"></div><div class="big num center">${baht(t)}</div><p class="muted center">ปิดการขายหลังเห็นเงินเข้าบัญชีหรือตรวจสลิปแล้ว ระบบไม่ได้ตรวจยอดโอนให้</p><div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="pay-qr">ได้รับเงินแล้ว</button></div>`},
+  if(!m.payload)return `<h2>ยังไม่ได้ตั้งค่า QR รับเงิน</h2><p>เพิ่มรูป QR รับเงินของร้าน หรือใส่เลขพร้อมเพย์ ที่แท็บตั้งค่าก่อน ระบบจึงจะสร้าง QR รับเงินได้</p><div class="pay"><button class="btn" data-act="close">ปิด</button><button class="btn main" data-act="go-config">ไปที่ตั้งค่า</button></div>`;
+  return `<h2 class="center">สแกนจ่ายพร้อมเพย์</h2><div class="qr" id="qrbox"></div><div class="big num center">${baht(t)}</div>${S.config.qrLabel?`<p class="center"><b>${esc(S.config.qrLabel)}</b></p>`:''}<p class="muted center">ปิดการขายหลังเห็นเงินเข้าบัญชีหรือตรวจสลิปแล้ว ระบบไม่ได้ตรวจยอดโอนให้</p><div class="pay"><button class="btn" data-act="close">ยกเลิก</button><button class="btn main" data-act="pay-qr">ได้รับเงินแล้ว</button></div>`},
  done(m){const s=m.sale;return `<svg class="chk" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="31"/><path d="M22 37l10 10 18-20"/></svg><h2 class="center">ปิดการขาย บิล #${s.no}</h2>${s.pay==='เงินสด'?`<div class="center"><div class="muted">เงินทอน</div><div class="big num">${baht(s.change)}</div></div>`:`<div class="center"><div class="muted">รับผ่านพร้อมเพย์</div><div class="big num">${baht(s.total)}</div></div>`}<div class="pay"><button class="btn" data-act="print" data-id="${s.id}">พิมพ์บิล</button><button class="btn main" data-act="close">บิลใหม่</button></div>`},
  void(m){if(m.sale.kind==='expense')return `<h2>ยกเลิกรายการจ่าย "${esc(m.sale.item)}"?</h2><p>ยอด ${baht(m.sale.amount)} จะไม่ถูกหักจากเงินสดคงเหลือ แต่รายการยังแสดงพร้อมป้ายยกเลิกแล้ว</p><div class="pay"><button class="btn" data-act="close">ไม่ยกเลิก</button><button class="btn danger" data-act="void-ok">ยกเลิกรายการ</button></div>`;return `<h2>ยกเลิกบิล #${m.sale.no}?</h2><p>ยอด ${baht(m.sale.total)} จะถูกตัดออกจากยอดขาย แต่บิลยังแสดงในรายการพร้อมป้ายยกเลิกแล้ว</p><div class="pay"><button class="btn" data-act="close">ไม่ยกเลิก</button><button class="btn danger" data-act="void-ok">ยกเลิกบิล</button></div>`},
  expense(m){const names=expenseNames();return `<h2>จ่ายเงินซื้อของ</h2><p class="muted">ใช้เมื่อหยิบเงินสดในลิ้นชักไปซื้อของเข้าร้าน</p><form id="ef" class="fields" style="display:grid">
@@ -467,7 +494,7 @@ const ACT={
  discount(){openModal({type:'discount',buf:S.cart.discount?String(S.cart.discount):''})},
  'disc-ok'(){S.cart.discount=+S.modal.buf||0;saveCart();closeModal()},
  cash(){openModal({type:'cash',buf:''})},
- qr(){const t=billTotals(S.cart.lines,S.cart.discount).total;openModal({type:'qr',payload:promptpayPayload(S.config.promptpay,t)})},
+ qr(){const t=billTotals(S.cart.lines,S.cart.discount).total;openModal({type:'qr',payload:payPayload(t)})},
  key(d){const m=S.modal;if(d.k==='C')m.buf='';else if(d.k==='B')m.buf=(m.buf||'').slice(0,-1);else if((m.buf||'').length<6)m.buf=(m.buf||'')+d.k;renderModal()},
  'set-buf'(d){S.modal.buf=d.v;renderModal()},
  'pay-cash'(){const t=billTotals(S.cart.lines,S.cart.discount).total,g=+S.modal.buf||t;if(g<t)return;finish('เงินสด',{received:g,change:g-t})},
@@ -491,6 +518,7 @@ const ACT={
  'cat-move'(d){const g=menuGroups(),i=g.findIndex(x=>x[0]===d.v),j=i+(+d.d);if(i<0||j<0||j>=g.length)return;[g[i],g[j]]=[g[j],g[i]];
   const sc=document.querySelector('#view .scroll')?.scrollTop||0;applyOrder(g);render();const s=document.querySelector('#view .scroll');if(s)s.scrollTop=sc;refocus(d)},
  'push-on'(){pushOn()},
+ 'qr-clear'(){saveConfig({shopQr:''});render();toast('เลิกใช้ QR ของร้านแล้ว จะใช้เลขพร้อมเพย์แทน')},
  'push-off'(){const me=pushMe();if(me)S.db.collection('push').doc(me.id).delete().then(()=>toast('ปิดการแจ้งเตือนบนเครื่องนี้แล้ว')).catch(()=>toast('ปิดไม่สำเร็จ ตรวจอินเทอร์เน็ต'))},
  'push-del'(d){S.db.collection('push').doc(d.id).delete().then(()=>toast('เลิกส่งแจ้งเตือนไปเครื่องนั้นแล้ว')).catch(()=>{})},
  'push-pref'(d){const me=pushMe();if(!me)return;const prefs={...me.prefs,[d.v]:!(me.prefs&&(me.prefs[d.v]??d.v==='stock'))};me.prefs=prefs;render();S.db.collection('push').doc(me.id).set({...me,prefs}).catch(()=>toast('บันทึกไม่สำเร็จ'))},
@@ -533,8 +561,8 @@ document.addEventListener('click',e=>{
 document.addEventListener('submit',e=>{
   e.preventDefault();
   if(e.target.id==='cfg'){const pu=$('c-push').value.trim();if(pu&&!/^https:\/\/script\.google\.com\//.test(pu)){toast('ลิงก์แจ้งเตือนต้องขึ้นต้นด้วย https://script.google.com/');return}
-    saveConfig({name:$('c-name').value.trim()||'ร้านกาแฟ',promptpay:$('c-pp').value.trim(),addons:$('c-add').value,pushUrl:pu});render();
-    const pp=$('c-pp').value.trim();toast(pp&&!promptpayPayload(pp,1)?'เลขพร้อมเพย์ต้องมี 10, 13 หรือ 15 หลัก':'บันทึกการตั้งค่าแล้ว')}
+    saveConfig({name:$('c-name').value.trim()||'ร้านกาแฟ',shopQr:$('c-qr').value,qrLabel:$('c-qrlabel').value.trim(),promptpay:$('c-pp').value.trim(),addons:$('c-add').value,pushUrl:pu});render();
+    const pp=$('c-pp').value.trim();toast(!$('c-qr').value&&pp&&!promptpayPayload(pp,1)?'เลขพร้อมเพย์ต้องมี 10, 13 หรือ 15 หลัก':'บันทึกการตั้งค่าแล้ว')}
   if(e.target.id==='stf'){const n=$('st-name').value.trim();if(!n)return;saveStock({id:'s'+Date.now(),name:n,status:'ok',order:S.stock.length});render();$('st-name')&&$('st-name').focus();toast('เพิ่ม '+n+' แล้ว')}
   if(e.target.id==='sef'){const n=$('se-name').value.trim();if(!n)return;const old=S.stock.find(y=>y.id===S.modal.item.id)||S.modal.item;
     const pv=$('se-price').value,qv=$('se-qty').value,u=$('se-unit').value,by=$('se-buyer').value.trim(),rec={...old,name:n};
